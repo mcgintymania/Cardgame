@@ -1,0 +1,22 @@
+{
+  "name": "card-club",
+  "private": true,
+  "version": "0.9.0",
+  "description": "Card Club: Take 2, Hold'em, Hearts, Gin, Draw, Blackjack, Solitaire and Beat the Pyramid. No real money, ever.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:offline": "node scripts/build.mjs --inline-react",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "seed": "bun scripts/gen-seed.ts"
+  },
+  "dependencies": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "typescript": "6.0.3"
+  }
+}
