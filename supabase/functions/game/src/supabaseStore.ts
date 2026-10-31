@@ -1,6 +1,6 @@
 // The real database behind the "game" function (Supabase, using the service role
 // key that Supabase gives every Edge Function; it never leaves the server).
-import type { Store } from './server.ts';
+import type { PublicState, Store } from './server.ts';
 
 export async function supabaseStore(env: (k: string) => string | undefined): Promise<Store> {
   // @ts-ignore: resolved by Deno at deploy time
@@ -69,6 +69,13 @@ export async function supabaseStore(env: (k: string) => string | undefined): Pro
     },
     async saveViews(rows) {
       if (rows.length) must(await db.from('player_views').upsert(rows, { onConflict: 'room_id,user_id' }));
+    },
+    async saveLook(userId, look) {
+      must(await db.from('profiles').update({ look }).eq('id', userId));
+    },
+    async loadPublic(roomId) {
+      const { data } = must(await db.from('game_states_public').select('version,state').eq('room_id', roomId).maybeSingle());
+      return (data as { version: number; state: PublicState } | null) ?? null;
     },
     async savePublic(roomId, version, state) {
       must(await db.from('game_states_public').upsert({ room_id: roomId, version, state, updated_at: new Date().toISOString() }, { onConflict: 'room_id' }));

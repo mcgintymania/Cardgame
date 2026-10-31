@@ -1,7 +1,7 @@
 // Reactions at the table: emotes (your character does a move) and quick phrases
 // (a speech bubble). Members react to the game and reply to you now and then.
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Character, type Look, type Pose } from '../../design/Character.tsx';
 import { CATALOGUE } from '../../lib/catalogue.ts';
 import { useStore } from '../../lib/store.ts';
@@ -13,36 +13,26 @@ export const sayText = (r: string) => r.slice(4);
 /** The pose for a seated figure: phrases don't move the character. */
 export const poseOf = (r: Reaction | undefined): Pose | undefined => (r && !isSay(r) ? r : undefined);
 
-export const PHRASES = [
-  'Well played', 'Nice hand', 'You were lucky', 'Good game', 'Unlucky', 'Easy!',
-  'Ouch', 'Come on…', 'Hurry up!', 'Thanks', 'Sorry!', 'Not again',
-];
-
-const REPLIES: Record<string, string[]> = {
-  'Well played': ['Thanks', 'Cheers', 'You too'],
-  'Nice hand': ['Thanks', 'Cheers', 'Had to be done'],
-  'Good game': ['Good game', 'Cheers', 'Rematch?'],
-  'You were lucky': ['Skill, pure skill', 'Luck? Please.', "I'll take it"],
-  Unlucky: ['Next time', 'Story of my life', 'Cheers'],
-  'Easy!': ['Steady on', "We'll see", 'Big talk'],
-  Ouch: ['Ha!', 'Sorry, not sorry', 'Brutal'],
-  'Come on…': ['Relax', 'Patience', 'Your turn will come'],
-  'Hurry up!': ["I'm thinking!", 'Patience…', 'Good things take time'],
-  Thanks: ['No problem', 'Any time'],
-  'Sorry!': ['No worries', 'Hmm…'],
-  'Not again': ['Oh yes', 'Afraid so', 'Ha!'],
-};
-const WIN_LINES = ["Read 'em and weep", 'Too good', 'Lovely', 'Pay up', "That'll do"];
-const KO_LINES = ['Not my day', 'Unlucky me', "I'll be back", 'Well played, all'];
-const LOSE_LINES = ['Unlucky', 'Fair enough', 'Next time'];
+import { KO_LINES, LOSE_LINES, PHRASES, REPLIES, WIN_LINES } from '../../../../../packages/engine/src/online/reactions.ts';
+import { onlineTableNow } from '../../lib/online/tables.ts';
+export { PHRASES };
 
 export function useEmotes() {
   const [active, setActive] = useState<Record<number, Reaction>>({});
   const timers = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
-  const emote = (seat: number, r: Reaction) => {
+  const show = (seat: number, r: Reaction) => {
     clearTimeout(timers.current[seat]);
     setActive((a: Record<number, Reaction>) => ({ ...a, [seat]: r }));
     timers.current[seat] = setTimeout(() => setActive((a: Record<number, Reaction>) => { const n = { ...a }; delete n[seat]; return n; }), isSay(r) ? 3000 : 2600);
+  };
+  // Online: what other people at the table say and do arrives from the server.
+  const remote = onlineTableNow();
+  useEffect(() => (remote ? remote.onReaction(show) : undefined), [remote]);
+  const emote = (seat: number, r: Reaction) => {
+    // Online, the table's own automatic lines are only for club members, never
+    // put in a real person's mouth (they speak for themselves).
+    if (remote && seat !== 0 && remote.isPersonAt(seat)) return;
+    show(seat, r);
   };
   return { active, emote };
 }
@@ -109,8 +99,11 @@ export function aiReaction(trigger: 'won' | 'lost' | 'reply' | 'ko', style: stri
 /** You react; someone at the table may answer. */
 export function reactAtTable(r: Reaction, players: Array<{ seat: number; personality?: string }>, emote: (seat: number, r: Reaction) => void) {
   emote(0, r);
-  const others = players.filter((p) => p.seat !== 0);
+  const remote = onlineTableNow();
+  // Online, only club members answer automatically; your brothers answer for themselves.
+  const others = players.filter((p) => p.seat !== 0 && !(remote && remote.isPersonAt(p.seat)));
   const o = others[Math.floor(Math.random() * others.length)];
-  const reply = o && aiReaction('reply', o.personality, Math.random(), r);
+  const reply = o ? aiReaction('reply', o.personality, Math.random(), r) : null;
+  remote?.react(r, o && reply ? { seat: o.seat, r: reply } : undefined);
   if (o && reply) setTimeout(() => emote(o.seat, reply), isSay(r) ? 1300 : 900);
 }

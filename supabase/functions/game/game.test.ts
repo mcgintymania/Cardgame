@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { handle, TURN_SECONDS, type GameData, type RoomRow, type SeatRow, type Store, type ViewRow } from './src/server.ts';
+import { handle, TURN_SECONDS, type GameData, type PublicState, type RoomRow, type SeatRow, type Store, type ViewRow } from './src/server.ts';
 import { ONLINE, type OnlineGame } from '../../../packages/engine/src/online/registry.ts';
 import { rotateSeats } from '../../../packages/engine/src/online/rotate.ts';
 import { seededRng } from '../../../packages/engine/src/core/rng.ts';
@@ -11,6 +11,8 @@ function memoryStore() {
   let seats: SeatRow[] = [];
   const games = new Map<string, { version: number; data: GameData }>();
   const views = new Map<string, ViewRow>();
+  const looks = new Map<string, unknown>();
+  const pubs = new Map<string, { version: number; state: PublicState }>();
   const finished: Array<{ roomId: string; placements: number[] }> = [];
   let n = 0;
   const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x));
@@ -44,12 +46,14 @@ function memoryStore() {
     },
     async loadViews(roomId) { return clone([...views.values()].filter((v) => v.room_id === roomId)); },
     async saveViews(rows) { for (const r of rows) views.set(`${r.room_id}/${r.user_id}`, clone(r)); },
-    async savePublic() {},
+    async saveLook(id, look) { looks.set(id, clone(look)); },
+    async loadPublic(roomId) { return pubs.has(roomId) ? clone(pubs.get(roomId)!) : null; },
+    async savePublic(roomId, version, state) { pubs.set(roomId, { version, state: clone(state) }); },
     async finishMatch(roomId, _game, seatSpecs, placements) {
       finished.push({ roomId, placements }); return placements.map((s, i) => ({ seat: s, place: i + 1, coins: seatSpecs[s].kind === 'human' ? 60 : 0 }));
     },
   };
-  return { store, rooms, views, games, finished, seatsOf: (id: string) => seats.filter((s) => s.room_id === id) };
+  return { store, rooms, views, games, finished, pubs, seatsOf: (id: string) => seats.filter((s) => s.room_id === id) };
 }
 
 let clock = Date.now();
@@ -164,4 +168,35 @@ describe('online tables (game function)', () => {
     const notMe = v.acting.includes(v.seat) ? 'bro' : 'sean';
     expect((await call(db.store, notMe, { op: 'act', roomId, action: { type: 'passUpcard' } })).status).toBe(409);
   });
+  test('phrases and emotes reach everyone at the table; only known phrases are allowed', async () => {
+    const db = memoryStore();
+    const { roomId, code } = await call(db.store, 'sean', { op: 'create', game: 'take2', seats: 3 });
+    await call(db.store, 'bro', { op: 'join', code });
+    expect((await call(db.store, 'sean', { op: 'react', roomId, reaction: 'say:Well played' })).status).toBe(403); // not started
+    await call(db.store, 'sean', { op: 'start', roomId });
+    const ai = db.views.get(`${roomId}/sean`)!.view.seats.findIndex((s) => s.kind === 'ai');
+    expect((await call(db.store, 'sean', { op: 'react', roomId, reaction: 'say:Well played', reply: { seat: ai, r: 'say:Cheers' } })).ok).toBe(true);
+    expect((await call(db.store, 'bro', { op: 'react', roomId, reaction: 'thumbs', reply: { seat: 0, r: 'say:Thanks' } })).ok).toBe(true); // can't speak for Sean
+    expect((await call(db.store, 'bro', { op: 'react', roomId, reaction: 'say:anything I like' })).status).toBe(400);
+    expect((await call(db.store, 'cousin', { op: 'react', roomId, reaction: 'say:Ouch' })).status).toBe(403);
+    const r = db.pubs.get(roomId)!.state.reactions!;
+    expect(r.map((x) => [x.seat, x.r])).toEqual([[0, 'say:Well played'], [ai, 'say:Cheers'], [1, 'thumbs']]);
+    // A move keeps the reactions.
+    const v = db.views.get(`${roomId}/sean`)!.view;
+    const who = v.acting.includes(v.seat) ? 'sean' : 'bro';
+    const wv = db.views.get(`${roomId}/${who}`)!.view;
+    await call(db.store, who, { op: 'act', roomId, action: ONLINE.take2.ai(rotateSeats(wv.view, wv.seat, wv.n), 'cautious', seededRng(1)) });
+    expect(db.pubs.get(roomId)!.state.reactions!.length).toBe(3);
+  });
+  test('rematch: the first to ask makes the new table, the others join it', async () => {
+    const { db, roomId } = await playWhole('gin', 2);
+    const a = await call(db.store, 'bro', { op: 'rematch', roomId });
+    expect(a.ok).toBe(true);
+    expect(db.pubs.get(roomId)!.state.rematch).toEqual({ roomId: a.roomId, by: 1 });
+    const b = await call(db.store, 'sean', { op: 'rematch', roomId });
+    expect(b.roomId).toBe(a.roomId);
+    expect(db.seatsOf(a.roomId).map((s) => s.user_id).sort()).toEqual(['bro', 'sean']);
+    expect(db.rooms.get(a.roomId)!.status).toBe('waiting');
+    expect((await call(db.store, 'cousin', { op: 'rematch', roomId })).status).toBe(403);
+  }, 60000);
 });

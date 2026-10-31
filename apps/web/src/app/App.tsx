@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { onlineOutcome, openOnlineTable, type OnlineTable } from '../features/online/launch.ts';
-import { leaveTable } from '../lib/online/tables.ts';
+import { leaveTable, rematchTable } from '../lib/online/tables.ts';
+import { RematchBanner } from '../features/online/Rematch.tsx';
+import { CodesPage, Welcome, playingOnDevice, useLookSync } from '../features/online/Welcome.tsx';
+import { useSession } from '../lib/online/useOnline.ts';
+import { lastUsername } from '../lib/online/client.ts';
+import { openRoomNext } from '../features/online/Lobby.tsx';
 import { OnlinePage } from '../features/online/Online.tsx';
 import { store, useStore } from '../lib/store.ts';
 import { cryptoRng } from '../../../../packages/engine/src/core/rng.ts';
@@ -140,6 +145,10 @@ export function App() {
     window.scrollTo(0, 0);
   };
   const [onlineTable, setOnlineTable] = useState<OnlineTable | null>(null);
+  const session = useSession();
+  const [onDevice, setOnDevice] = useState(playingOnDevice);
+  const [newCodes, setNewCodes] = useState<string[] | null>(null);
+  useLookSync();
   const nav: Nav = {
     go,
     startOnline: async (roomId) => {
@@ -237,7 +246,10 @@ export function App() {
     }
   };
 
-  if (!profile) return <CreatePlayer />;
+  // Front door: sign in to play online, or play on this device. Signed in (or chosen) → straight in.
+  if (newCodes) return <CodesPage codes={newCodes} onDone={() => setNewCodes(null)} />;
+  if (!session && !onDevice) return <Welcome onDevice={() => setOnDevice(true)} onCodes={setNewCodes} />;
+  if (!profile) return <CreatePlayer defaultName={session ? lastUsername() : undefined} />;
 
   if (heartsMatch) {
     return (
@@ -292,14 +304,26 @@ export function App() {
       go('online');
     };
     const k = `online-${t.roomId}`;
-    const common = { onFinished: () => onlineOutcome(t), onExit: exit, onRematch: () => { t.session.dispose(); setOnlineTable(null); go('online'); } };
-    switch (t.game) {
-      case 'take2': return <Take2Table key={k} {...common} setup={t.setup as never} />;
-      case 'poker': case 'draw': return <PokerTable key={k} {...common} setup={t.setup as never} />;
-      case 'hearts': return <HeartsTable key={k} {...common} setup={t.setup as never} />;
-      case 'gin': return <GinTable key={k} {...common} setup={t.setup as never} />;
-      case 'blackjack': return <BlackjackTable key={k} {...common} setup={t.setup as never} />;
-    }
+    // Rematch: the same people, a new table. The first to press it makes it; the rest join it.
+    const rematch = async () => {
+      let next: string | null = null;
+      try { next = (await rematchTable(t.roomId)).roomId; } catch { /* fall back to the lobby */ }
+      t.session.dispose();
+      setOnlineTable(null);
+      openRoomNext(next);
+      go('online');
+    };
+    const common = { onFinished: () => onlineOutcome(t), onExit: exit, onRematch: () => { void rematch(); } };
+    const table = (() => {
+      switch (t.game) {
+        case 'take2': return <Take2Table key={k} {...common} setup={t.setup as never} />;
+        case 'poker': case 'draw': return <PokerTable key={k} {...common} setup={t.setup as never} />;
+        case 'hearts': return <HeartsTable key={k} {...common} setup={t.setup as never} />;
+        case 'gin': return <GinTable key={k} {...common} setup={t.setup as never} />;
+        case 'blackjack': return <BlackjackTable key={k} {...common} setup={t.setup as never} />;
+      }
+    })();
+    return <>{table}<RematchBanner session={t.session} onJoin={() => { void rematch(); }} /></>;
   }
 
   if (pokerMatch) {

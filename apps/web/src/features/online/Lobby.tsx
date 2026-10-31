@@ -46,7 +46,7 @@ function WaitingRoom({ roomId, nav, onLeft }: { roomId: string; nav: Nav; onLeft
         setInfo(i);
         if (i.room.status === 'playing') { await nav.startOnline(roomId); return; }
       } catch (e) { if (live) setError(msg(e)); }
-      if (live) t = setTimeout(poll, 2000);
+      if (live) t = setTimeout(poll, 1500);
     };
     void poll();
     return () => { live = false; clearTimeout(t); };
@@ -100,13 +100,17 @@ function WaitingRoom({ roomId, nav, onLeft }: { roomId: string; nav: Nav; onLeft
   );
 }
 
+/** A table to open in the waiting room next time the lobby shows (after a rematch). */
+let nextRoom: string | null = null;
+export function openRoomNext(roomId: string | null) { nextRoom = roomId; }
+
 export function Lobby({ nav }: { nav: Nav }) {
   const { shows } = useShown();
   const games = ONLINE_GAMES.filter((g) => shows(g));
   const [game, setGame] = useState<OnlineGame>(games[0] ?? 'take2');
   const [seats, setSeats] = useState<number>(DEFAULT_SEATS[games[0] ?? 'take2']);
   const [code, setCode] = useState('');
-  const [room, setRoom] = useState<string | null>(null);
+  const [room, setRoom] = useState<string | null>(() => { const r = nextRoom; nextRoom = null; return r; });
   const [mine, setMine] = useState<RoomInfo[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

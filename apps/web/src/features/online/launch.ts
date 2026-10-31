@@ -4,7 +4,7 @@
 
 import { GUESTS, ROSTER, type AICharacter } from '../../lib/roster.ts';
 import { migrateLook } from '../../lib/look.ts';
-import { RemoteSession, myView, roomInfo, type PlayerViewData } from '../../lib/online/tables.ts';
+import { RemoteSession, forgetNames, myView, roomInfo, type PlayerViewData } from '../../lib/online/tables.ts';
 import { OnlineError } from '../../lib/online/client.ts';
 import type { Outcome } from '../../lib/club.ts';
 import { ordinal } from '../../lib/club.ts';
@@ -22,6 +22,7 @@ const skills0 = { take2: 0, poker: 0, hearts: 0, gin: 0, draw: 0, blackjack: 0 }
 export async function openOnlineTable(roomId: string): Promise<OnlineTable> {
   const row = await myView(roomId);
   if (!row) throw new OnlineError("The game hasn't started yet.");
+  forgetNames(); // fresh looks for the table
   const info = await roomInfo(roomId);
   const d = row.view;
   // Local seat i = real seat (mySeat + i) % n.

@@ -10,6 +10,9 @@
 //   next    { roomId }              deal the next hand (anyone at the table)
 //   nudge   { roomId }              someone's taking too long: play the safe move for them
 //   leave   { roomId }              before the start: give up your seat; during a game: an AI member plays it
+//   react   { roomId, reaction, reply? }  a quick phrase or emote everyone at the table sees
+//   look    { look }                your character, so the people you play see it (cosmetic only)
+//   rematch { roomId }              after the game: a new table with the same game; others who ask join it
 //
 // Everything is checked here: whose turn it is, what's legal, who's at the table.
 // Each player's own view (their hand only) goes in player_views; the deck never leaves the server.
@@ -17,9 +20,12 @@
 import { cryptoRng } from '../../../../packages/engine/src/core/rng.ts';
 import { IllegalActionError } from '../../../../packages/engine/src/core/game.ts';
 import { ONLINE, isOnlineGame, type OnlineGame } from '../../../../packages/engine/src/online/registry.ts';
+import { REACTIONS_KEEP, validReaction, type TableReaction } from '../../../../packages/engine/src/online/reactions.ts';
 import { betweenHands, forceMoves, nextHand, playAction, startMatch, type MatchMeta, type Played, type SeatSpec } from '../../../../packages/engine/src/online/match.ts';
 
-export interface RoomRow { id: string; code: string; game: OnlineGame; host: string | null; status: 'waiting' | 'playing' | 'finished' | 'abandoned'; config: { seats?: number; rules?: Record<string, unknown> } }
+export interface RoomRow { id: string; code: string; game: OnlineGame; host: string | null; status: 'waiting' | 'playing' | 'finished' | 'abandoned'; config: { seats?: number; rules?: Record<string, unknown>; rematch?: string } }
+/** What every seated player can read: the step (so browsers know to fetch), reactions and any rematch. */
+export interface PublicState { step: number; status: string; acting: number[]; turnSince: number; reactions?: TableReaction[]; rematch?: { roomId: string; by: number } }
 export interface SeatRow { room_id: string; seat: number; user_id: string | null; ai_key: string | null }
 export interface GameData { engine: unknown; meta: MatchMeta & { result?: unknown } }
 export interface ViewRow { room_id: string; user_id: string; version: number; view: PlayerViewData }
@@ -44,7 +50,9 @@ export interface Store {
   saveGame(roomId: string, expected: number | null, data: GameData): Promise<boolean>;
   loadViews(roomId: string): Promise<ViewRow[]>;
   saveViews(rows: ViewRow[]): Promise<void>;
-  savePublic(roomId: string, version: number, state: unknown): Promise<void>;
+  loadPublic(roomId: string): Promise<{ version: number; state: PublicState } | null>;
+  savePublic(roomId: string, version: number, state: PublicState): Promise<void>;
+  saveLook(userId: string, look: Record<string, unknown>): Promise<void>;
   finishMatch(roomId: string, game: OnlineGame, seats: SeatSpec[], placements: number[]): Promise<unknown>;
 }
 
@@ -96,6 +104,14 @@ export async function handle(req: Request, store: Store, now = () => Date.now())
       case 'next': return ok(await act(store, me, String(body.roomId), '__next', now));
       case 'nudge': return ok(await nudge(store, me, String(body.roomId), now));
       case 'leave': return ok(await leave(store, me, String(body.roomId)));
+      case 'react': return ok(await react(store, me, String(body.roomId), body.reaction, body.reply, now));
+      case 'look': {
+        const look = body.look;
+        if (!look || typeof look !== 'object' || Array.isArray(look) || JSON.stringify(look).length > 4000) return fail(400, 'Bad look.');
+        await store.saveLook(me, look);
+        return ok();
+      }
+      case 'rematch': return ok(await rematch(store, me, String(body.roomId), now));
       default: return fail(400, 'Unknown request.');
     }
   } catch (e) {
@@ -240,6 +256,62 @@ async function leave(store: Store, me: string, roomId: string) {
   return {};
 }
 
+/** The seat you played (or play) at this table, playing or finished; -1 if none. */
+async function seatOf(store: Store, me: string, roomId: string) {
+  const room = await store.roomById(roomId);
+  if (!room) throw new Refusal(404, 'That table has closed.');
+  const g = await store.loadGame(room.id);
+  const seat = g ? g.data.meta.seats.findIndex((s) => s.userId === me) : -1;
+  if (!g || seat < 0) throw new Refusal(403, "You're not playing at this table.");
+  return { room, g, seat };
+}
+
+function newId(): string {
+  const b = new Uint8Array(6); crypto.getRandomValues(b);
+  return Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
+}
+
+async function addReactions(store: Store, roomId: string, list: Array<Omit<TableReaction, 'id'>>, extra: Partial<PublicState> = {}) {
+  const pub = await store.loadPublic(roomId);
+  if (!pub) return;
+  const reactions = [...(pub.state.reactions ?? []), ...list.map((x) => ({ ...x, id: newId() }))].slice(-REACTIONS_KEEP);
+  await store.savePublic(roomId, pub.version, { ...pub.state, ...extra, reactions });
+}
+
+async function react(store: Store, me: string, roomId: string, reaction: unknown, replyTo: unknown, now: () => number) {
+  if (!validReaction(reaction)) throw new Refusal(400, 'Pick one of the phrases or emotes.');
+  const { g, seat } = await seatOf(store, me, roomId);
+  const list: Array<Omit<TableReaction, 'id'>> = [{ seat, r: reaction, by: seat, at: now() }];
+  // A club member's answer, picked by your browser: only for a seat a club member actually holds.
+  const rp = replyTo as { seat?: unknown; r?: unknown } | undefined;
+  if (rp && Number.isInteger(rp.seat) && validReaction(rp.r) && g.data.meta.seats[rp.seat as number]?.kind === 'ai' && !g.data.meta.seats[rp.seat as number]?.userId) {
+    list.push({ seat: rp.seat as number, r: rp.r, by: seat, at: now() + 1200 });
+  }
+  await addReactions(store, roomId, list);
+  return {};
+}
+
+async function rematch(store: Store, me: string, roomId: string, now: () => number) {
+  const { room, g, seat } = await seatOf(store, me, roomId);
+  if (room.status === 'playing') throw new Refusal(409, 'This game is still going.');
+  // Someone already asked: join their new table if it's still waiting.
+  if (room.config.rematch) {
+    const next = await store.roomById(room.config.rematch);
+    if (next && next.status === 'waiting') return { ...(await join(store, me, next.code)), code: next.code };
+  }
+  const made = await create(store, me, { game: room.game, seats: g.data.meta.seats.length, rules: room.config.rules ?? {} });
+  await store.updateRoom(room.id, { config: { ...room.config, rematch: made.roomId } });
+  // Two people pressed it at once: whoever was saved last wins, the other joins that one.
+  const after = await store.roomById(room.id);
+  if (after?.config.rematch && after.config.rematch !== made.roomId) {
+    await leave(store, me, made.roomId);
+    const theirs = await store.roomById(after.config.rematch);
+    if (theirs && theirs.status === 'waiting') return { ...(await join(store, me, theirs.code)), code: theirs.code };
+  }
+  await addReactions(store, room.id, [{ seat, r: 'say:Rematch?', by: seat, at: now() }], { rematch: { roomId: made.roomId, by: seat } });
+  return made;
+}
+
 async function loadForPlayer(store: Store, me: string, roomId: string) {
   const room = await store.roomById(roomId);
   if (!room) throw new Refusal(404, 'That table has closed.');
@@ -281,6 +353,7 @@ async function persist(store: Store, room: RoomRow, expected: number | null, pla
     });
   });
   await store.saveViews(rows);
-  await store.savePublic(room.id, played.meta.step, { step: played.meta.step, status: finished ? 'finished' : 'playing', acting, turnSince: played.meta.turnSince });
+  const reactions = (await store.loadPublic(room.id))?.state.reactions;
+  await store.savePublic(room.id, played.meta.step, { step: played.meta.step, status: finished ? 'finished' : 'playing', acting, turnSince: played.meta.turnSince, ...(reactions ? { reactions } : {}) });
   return true;
 }

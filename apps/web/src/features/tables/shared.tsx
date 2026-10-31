@@ -1,5 +1,6 @@
 // Pieces shared by the Hearts and Gin tables (Take 2 and poker have their own older copies).
 
+import { onlineTableNow } from '../../lib/online/tables.ts';
 import React, { useEffect, useRef, useState } from 'react';
 import { Avatar, type AvatarConfig } from '../../design/Avatar.tsx';
 import { Button, Sheet, Tag } from '../../design/ui.tsx';
@@ -143,7 +144,7 @@ export function MatchOverSheet({ open, winnerLook, eyebrow, headline, sub, outco
       {outcome && <OutcomeCard outcome={outcome} />}
       {children}
       <EndButtons isEvent={isEvent} onRematch={onRematch} onExit={onExit} />
-      <p className="fine"><Tag>Club</Tag> Ratings and records saved on this device.</p>
+      <p className="fine"><Tag>Club</Tag> {onlineTableNow() ? "Ratings and records saved to the online club." : "Ratings and records saved on this device."}</p>
     </Sheet>
   );
 }

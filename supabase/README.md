@@ -32,6 +32,8 @@ Same steps as `auth`, with a function named exactly **`game`**:
 3. **Deploy**, then turn **off** the JWT check in its settings.
    - The function checks who you are itself, from your sign-in.
 
+**Updating it later:** open **Edge Functions → game → Code**, select all, paste the new `functions/game/index.ts` over it and press **Deploy**. Games already in progress carry on.
+
 ## 5. What to send Claude
 From **Project Settings → API** (Data API), send:
 - the **Project URL**,

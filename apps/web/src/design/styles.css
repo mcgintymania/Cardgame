@@ -1625,3 +1625,16 @@ body:has(.table-screen) .season-deco { display: none; }
 .my-tables span { display: flex; flex-direction: column; } .my-tables small { color: var(--ink-3); }
 .join-row { display: flex; gap: 10px; }
 .code-input { font-family: ui-monospace, Menlo, Consolas, monospace; letter-spacing: .2em; text-transform: uppercase; max-width: 200px; font-size: 22px; }
+
+/* Online: someone asked for a rematch */
+.rematch-banner { position: fixed; left: 50%; top: max(12px, env(safe-area-inset-top)); transform: translateX(-50%); z-index: 400;
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 16px; border-radius: 999px;
+  background: var(--panel, #1d1a17); border: 1px solid var(--brass); box-shadow: 0 10px 30px rgba(0,0,0,.45); max-width: calc(100vw - 32px); }
+.rematch-banner span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Front door */
+.welcome .welcome-choices { display: grid; gap: 10px; margin: 22px 0 8px; }
+.welcome .welcome-choices > * { width: 100%; }
+.link-btn { background: none; border: 0; color: var(--brass); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font: inherit; padding: 10px 0; }
+.welcome .welcome-device { display: block; margin: 6px auto 0; }
+.welcome .online-auth { margin: 16px 0 0; }

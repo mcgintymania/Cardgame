@@ -18,6 +18,7 @@ import { cryptoRng } from '../../../../../packages/engine/src/core/rng.ts';
 import { POKER_PRESETS } from '../poker/Setup.tsx';
 import { BoostRings, DailyCut } from '../shop/extras.tsx';
 import { openShopAt } from '../shop/Shop.tsx';
+import { useSession } from '../../lib/online/useOnline.ts';
 import { SeasonBanner } from '../seasons/Season.tsx';
 
 const QUICK: GameId[] = ['take2', 'poker', 'hearts', 'gin', 'draw', 'blackjack'];
@@ -159,6 +160,7 @@ export function Home({ nav }: { nav: Nav }) {
   const { profile, stats, club, wallet } = useStore();
   const extras = useMyExtras();
   const { games, shows } = useShown();
+  const signedIn = !!useSession();
   if (!profile) return null;
   const last = stats.lastPlayed ? new Date(stats.lastPlayed) : null;
   return (
@@ -179,6 +181,7 @@ export function Home({ nav }: { nav: Nav }) {
           <div className="btn-row hero-ctas">
             {QUICK.some(shows) && <Button size="lg" className="play-cta quick-cta" onClick={() => quickPlay(nav, shows)}>Quick Play</Button>}
             <Button size="lg" variant={QUICK.some(shows) ? 'felt' : undefined} className="play-cta" onClick={() => nav.go('play')}>Find a game</Button>
+            <Button size="lg" variant="ghost" className="play-cta" onClick={() => nav.go('online')}>{signedIn ? 'Play with friends' : 'Play online'}</Button>
           </div>
         </div>
       </section>

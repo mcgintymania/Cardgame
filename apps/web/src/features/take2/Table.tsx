@@ -1,3 +1,4 @@
+import { onlineTableNow } from '../../lib/online/tables.ts';
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { awardFeats, take2Feats } from '../../lib/feats.ts';
 import type { MatchSetup, FinishReport } from '../../app/App.tsx';
@@ -218,7 +219,7 @@ export function Take2Table({ setup, onExit, onRematch, onFinished }: {
           toast(e.seat === 0 ? 'You miss a turn' : `${nameOf(e.seat)} misses a turn`, 'hot');
           break;
         case 'skipPassed':
-          toast(`${nameOf(e.from)} passes the skip on`, 'hot');
+          toast(e.from === 0 ? "You pass the skip on" : `${nameOf(e.from)} passes the skip on`, "hot");
           break;
         case 'suitChosen':
           sfx.suit();
@@ -587,12 +588,12 @@ export function Take2Table({ setup, onExit, onRematch, onFinished }: {
           </div>
           <p className="eyebrow">Last one standing</p>
           <h2 className="display h-lg">{view.winner === 0 ? 'You win!' : view.players[view.winner ?? 0]?.name}</h2>
-          <p className="muted">{view.round} rounds played</p>
+          <p className="muted">{view.round} {view.round === 1 ? 'round' : 'rounds'} played</p>
         </div>
         {outcome && <OutcomeCard outcome={outcome} />}
         <Standings view={view} avatars={avatars} final />
         <EndButtons isEvent={isEvent} onRematch={onRematch} onExit={() => onExit(false)} />
-        <p className="fine"><Tag>Club</Tag> Ratings and records saved on this device.</p>
+        <p className="fine"><Tag>Club</Tag> {onlineTableNow() ? "Ratings and records saved to the online club." : "Ratings and records saved on this device."}</p>
       </Sheet>
 
       <Sheet open={sheet === 'skipped'} title="Your result" dismissable={false}>

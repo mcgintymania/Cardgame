@@ -5,8 +5,8 @@ import { Button, Tag } from '../../design/ui.tsx';
 import { BodyEditor } from '../wardrobe/BodyEditor.tsx';
 import { STARTER_LOOKS } from '../../lib/look.ts';
 
-export function CreatePlayer() {
-  const [name, setName] = useState('');
+export function CreatePlayer({ defaultName }: { defaultName?: string } = {}) {
+  const [name, setName] = useState(defaultName ?? '');
   const [look, setLook] = useState<Look>(DEFAULT_LOOK);
   const [step, setStep] = useState<'you' | 'outfit'>('you');
   const trimmed = name.trim();

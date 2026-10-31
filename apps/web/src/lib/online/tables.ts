@@ -3,6 +3,7 @@
 
 import type { GameSession, SessionUpdate } from '../../../../../packages/engine/src/core/session.ts';
 import { rotateSeats } from '../../../../../packages/engine/src/online/rotate.ts';
+import type { TableReaction } from '../../../../../packages/engine/src/online/reactions.ts';
 import type { OnlineGame } from '../../../../../packages/engine/src/online/registry.ts';
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './config.ts';
 import { OnlineError, online, select, token } from './client.ts';
@@ -39,6 +40,17 @@ export const joinTable = (code: string) => gameFn<{ roomId: string }>('join', { 
 export const tableSettings = (roomId: string, seats: number) => gameFn('settings', { roomId, seats });
 export const startTable = (roomId: string) => gameFn('start', { roomId });
 export const leaveTable = (roomId: string) => gameFn('leave', { roomId });
+export const rematchTable = (roomId: string) => gameFn<{ roomId: string; code: string }>('rematch', { roomId });
+
+interface PublicRow { version: number; state: { reactions?: TableReaction[]; rematch?: { roomId: string; by: number } } }
+async function publicState(roomId: string): Promise<PublicRow | null> {
+  const [row] = await select<PublicRow[]>(`game_states_public?room_id=eq.${roomId}&select=version,state`);
+  return row ?? null;
+}
+
+/** The online table on screen right now (null when you're playing on this device). */
+let activeTable: RemoteSession | null = null;
+export const onlineTableNow = () => activeTable;
 
 export async function myTables(): Promise<RoomInfo[]> {
   const uid = online.session?.user_id;
@@ -46,12 +58,18 @@ export async function myTables(): Promise<RoomInfo[]> {
   return rows.map((r) => r.room).filter((r): r is RoomInfo => !!r && (r.status === 'waiting' || r.status === 'playing'));
 }
 
+const nameCache = new Map<string, { id: string; username: string; look: unknown }>();
+export function forgetNames() { nameCache.clear(); }
+
 export async function roomInfo(roomId: string): Promise<{ room: RoomInfo; seats: Array<{ seat: number; user_id: string | null; ai_key: string | null }>; names: Record<string, { username: string; look: unknown }> } | null> {
   const [room] = await select<RoomInfo[]>(`rooms?id=eq.${roomId}&select=id,code,game,status,host,config`);
   if (!room) return null;
   const seats = await select<Array<{ seat: number; user_id: string | null; ai_key: string | null }>>(`room_seats?room_id=eq.${roomId}&select=seat,user_id,ai_key&order=seat`);
   const ids = seats.map((s) => s.user_id).filter(Boolean) as string[];
-  const profiles = ids.length ? await select<Array<{ id: string; username: string; look: unknown }>>(`profiles?id=in.(${ids.join(',')})&select=id,username,look`) : [];
+  // Names change rarely: remember them so the waiting room checks quickly.
+  const missing = ids.filter((i) => !nameCache.has(i));
+  if (missing.length) for (const p of await select<Array<{ id: string; username: string; look: unknown }>>(`profiles?id=in.(${missing.join(',')})&select=id,username,look`)) nameCache.set(p.id, p);
+  const profiles = ids.map((i) => nameCache.get(i)).filter((p): p is { id: string; username: string; look: unknown } => !!p);
   return { room, seats, names: Object.fromEntries(profiles.map((p) => [p.id, { username: p.username, look: p.look }])) };
 }
 
@@ -59,11 +77,6 @@ export async function myView(roomId: string): Promise<{ version: number; view: P
   const uid = online.session?.user_id;
   const [row] = await select<Array<{ version: number; view: PlayerViewData }>>(`player_views?room_id=eq.${roomId}&user_id=eq.${uid}&select=version,view`);
   return row ?? null;
-}
-async function myVersion(roomId: string): Promise<number | null> {
-  const uid = online.session?.user_id;
-  const [row] = await select<Array<{ version: number }>>(`player_views?room_id=eq.${roomId}&user_id=eq.${uid}&select=version`);
-  return row ? row.version : null;
 }
 
 /** Seconds before a slow player can be nudged (must match the server). */
@@ -86,6 +99,11 @@ export class RemoteSession<Action = unknown, View = unknown, Event = unknown> im
   private disposed = false;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private lastNudge = 0;
+  private seenReactions: Set<string> | null = null;
+  private reactionFns = new Set<(seat: number, r: any) => void>();
+  private rematchFns = new Set<(r: { roomId: string; by: number } | null) => void>();
+  /** A rematch someone has asked for (their new table), once the game is over. */
+  rematch: { roomId: string; by: number } | null = null;
   onData?: (d: PlayerViewData) => void;
 
   constructor(readonly roomId: string, version: number, data: PlayerViewData) {
@@ -93,6 +111,7 @@ export class RemoteSession<Action = unknown, View = unknown, Event = unknown> im
     this.shown = version;
     this.current = this.rot(data.view) as View;
     this.schedule(400);
+    activeTable = this as unknown as RemoteSession;
   }
 
   get info() { return this.data; }
@@ -100,7 +119,41 @@ export class RemoteSession<Action = unknown, View = unknown, Event = unknown> im
 
   getView(): View { return this.current; }
   subscribe(fn: (u: SessionUpdate<View, Event>) => void): () => void { this.listeners.add(fn); return () => this.listeners.delete(fn); }
-  dispose(): void { this.disposed = true; if (this.timer) clearTimeout(this.timer); this.listeners.clear(); }
+  dispose(): void {
+    this.disposed = true; if (this.timer) clearTimeout(this.timer); this.listeners.clear();
+    this.reactionFns.clear(); this.rematchFns.clear();
+    if ((activeTable as unknown) === this) activeTable = null;
+  }
+
+  /** Seat numbers here are yours (you are 0); the server's are real seats. */
+  private real(local: number) { return (local + this.data.seat) % this.data.n; }
+  private local(real: number) { return (real - this.data.seat + this.data.n) % this.data.n; }
+  /** A real person sits here (not a club member). */
+  isPersonAt(local: number): boolean { return this.data.seats[this.real(local)]?.kind === 'human'; }
+  /** Other people's phrases and emotes, as they arrive. */
+  onReaction(fn: (seat: number, r: any) => void): () => void { this.reactionFns.add(fn); return () => { this.reactionFns.delete(fn); }; }
+  onRematch(fn: (r: { roomId: string; by: number } | null) => void): () => void { this.rematchFns.add(fn); fn(this.rematch); return () => { this.rematchFns.delete(fn); }; }
+  /** Say something or emote: everyone at the table sees it (shown here straight away by the table). */
+  react(r: string, reply?: { seat: number; r: string }): void {
+    void gameFn('react', { roomId: this.roomId, reaction: r, reply: reply ? { seat: this.real(reply.seat), r: reply.r } : undefined }).catch(() => {});
+  }
+  /** Who asked for a rematch, by name. */
+  nameAt(real: number): string { return this.data.seats[real]?.name ?? 'Someone'; }
+
+  private takePublic(p: PublicRow) {
+    const list = p.state.reactions ?? [];
+    if (!this.seenReactions) this.seenReactions = new Set(list.map((x) => x.id)); // old ones aren't replayed
+    for (const x of list) {
+      if (this.seenReactions.has(x.id)) continue;
+      this.seenReactions.add(x.id);
+      if (x.by === this.data.seat) continue; // you already saw your own (and the reply you got)
+      const delay = x.seat !== x.by ? 1300 : 0; // a club member's answer comes a moment later
+      const show = () => { for (const fn of this.reactionFns) fn(this.local(x.seat), x.r); };
+      if (delay) setTimeout(show, delay); else show();
+    }
+    const rm = p.state.rematch ?? null;
+    if (rm && rm.roomId !== this.rematch?.roomId) { this.rematch = rm; for (const fn of this.rematchFns) fn(rm); }
+  }
 
   async act(action: Action): Promise<void> {
     const t = (action as { type?: string })?.type ?? '';
@@ -122,13 +175,15 @@ export class RemoteSession<Action = unknown, View = unknown, Event = unknown> im
   private async tick() {
     if (this.disposed) return;
     try {
-      const v = await myVersion(this.roomId);
+      const p = await publicState(this.roomId);
+      const v = p ? p.version : null;
+      if (p) this.takePublic(p);
       if (v !== null && v > this.shown) await this.refresh();
       else this.maybeNudge();
     } catch { /* try again shortly */ }
     const myTurn = this.data.acting.includes(this.data.seat);
     const hidden = typeof document !== 'undefined' && document.hidden;
-    this.schedule(this.data.status === 'finished' ? 15000 : hidden ? 5000 : myTurn ? 2500 : 1200);
+    this.schedule(this.data.status === 'finished' ? (hidden ? 10000 : 3000) : hidden ? 5000 : myTurn ? 2000 : 1200);
   }
 
   private maybeNudge() {
