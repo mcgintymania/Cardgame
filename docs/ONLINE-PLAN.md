@@ -3,6 +3,11 @@
 Status: **offline build playable** (Take 2, Hold'em, Five-Card Draw, Hearts, Gin Rummy, Blackjack and Solitaire vs AI; the Club, titles, Cups, wardrobe and shop). Online (GitHub + Supabase) is next.
 Updated: 19 Oct 2026
 
+## Progress (31 Oct 2026)
+- **GitHub:** the code is in `mcgintymania/Cardgame`. It went in through pull request #1 (branch `source-and-database`), and `index.html` stays the playable single-file build.
+- **Database:** the Supabase schema and seed are written in `supabase/migrations/`. Every table has row level security and server-only writes, and the security tests pass on PostgreSQL 16. The owner runs the SQL in the dashboard (see `supabase/README.md`).
+- **Next:** three Edge Functions (sign-up, sign-in and recovery, with rate limits), the sign-in screens, then reading the shared club from the database.
+
 ## Decisions so far
 - **Build order changed by the owner:** games and design first, offline against AI. GitHub and Supabase (accounts, online play, server-held coins) come after.
 - **No real money, ever.** Club coins are earned in play and spent on cosmetics only.
