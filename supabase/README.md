@@ -1,11 +1,12 @@
 # Supabase setup
 
-Two SQL files set up the whole database. Run them **in order**, once.
+Three SQL files set up the whole database. Run them **in order**, once each.
 
 ## 1. Run the SQL
 In the Supabase dashboard: **SQL Editor → New query**.
 1. Open `migrations/20261031000001_card_club_schema.sql`, copy all of it, paste, **Run**. It should finish with "Success. No rows returned".
 2. New query again: paste `migrations/20261031000002_seed.sql`, **Run**. This adds the 247 items, the 25 AI members, their ratings and the first champions.
+3. New query again: paste `migrations/20261101000003_online_tables.sql`, **Run**. This lets online games record their results (ratings, coins, XP, head-to-heads, news) in one safe step.
 
 The seed file can be run again safely, and should be whenever the catalogue changes. It's generated from the game code by `bun scripts/gen-seed.ts`.
 
@@ -15,7 +16,23 @@ The seed file can be run again safely, and should be whenever the catalogue chan
   - The direct sign-up route stays closed, so nobody can skip those checks.
 - **Email → "Confirm email": OFF.** There is no email. Accounts use a private placeholder address that never receives mail.
 
-## 3. What to send Claude
+## 3. Switch on accounts (the "auth" function)
+1. **Edge Functions → Deploy a new function → Via Editor.** Name it exactly `auth`.
+2. Delete the sample code, paste the whole of `functions/auth/index.ts`, then **Deploy**.
+3. Open the function's **Details / Settings** and turn **off** the JWT check. It may be called "Verify JWT" or "Enforce JWT verification". People using it aren't signed in yet; the function does its own checks and rate limits.
+
+You don't need to paste any keys. Supabase gives the function its own URL and keys automatically.
+
+## 4. Switch on online tables (the "game" function)
+Same steps as `auth`, with a function named exactly **`game`**:
+1. **Edge Functions → Deploy a new function → Via Editor**, name `game`.
+2. Paste the whole of `functions/game/index.ts`.
+   - It's one long line of code (the whole rules engine bundled together), and that's expected.
+   - Don't edit it. It's generated from `functions/game/src` by `node scripts/build-game-fn.mjs`.
+3. **Deploy**, then turn **off** the JWT check in its settings.
+   - The function checks who you are itself, from your sign-in.
+
+## 5. What to send Claude
 From **Project Settings → API** (Data API), send:
 - the **Project URL**,
 - the **anon / public** key (also called "publishable"). This key is designed to be public, and the database rules do the protecting.

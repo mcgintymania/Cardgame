@@ -25,6 +25,10 @@ import { heartsAI, heartsThinkMs } from '../../../../../packages/engine/src/hear
 import type { HeartsAction, HeartsConfig, HeartsEvent, HeartsView, PassDir, Trick } from '../../../../../packages/engine/src/hearts/types.ts';
 
 export interface HeartsMatchSetup {
+  /** Online: the RemoteSession for this table (replaces the local AI session). */
+  remote?: unknown;
+  /** Online: this table's room. */
+  roomId?: string;
   config: Partial<HeartsConfig>;
   opponents: string[];
   kind: MatchKind;
@@ -148,7 +152,7 @@ export function HeartsTable({ setup, onExit, onRematch, onFinished }: {
   const avatars: AvatarConfig[] = useMemo(() => [profile!.avatar, ...setup.opponents.map((id) => rosterById(id)!.avatar)], []);
   const props = useMemo(() => seatProps(setup.opponents), []);
 
-  const session: Session = useMemo(() => new LocalSession(HeartsModule as never, {
+  const session: Session = useMemo(() => (setup.remote as Session | undefined) ?? new LocalSession(HeartsModule as never, {
     config: setup.config,
     seats: seatInfo,
     humanSeat: 0,

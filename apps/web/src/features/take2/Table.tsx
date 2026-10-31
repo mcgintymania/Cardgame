@@ -148,7 +148,7 @@ export function Take2Table({ setup, onExit, onRematch, onFinished }: {
   const avatars: AvatarConfig[] = useMemo(() => [profile!.avatar, ...setup.opponents.map((id) => rosterById(id)!.avatar)], []);
   const props = useMemo(() => seatProps(setup.opponents), []);
 
-  const session: Session = useMemo(() => new LocalSession(Take2Module as never, {
+  const session: Session = useMemo(() => (setup.remote as Session | undefined) ?? new LocalSession(Take2Module as never, {
     config: setup.config,
     seats: seatInfo,
     humanSeat: 0,

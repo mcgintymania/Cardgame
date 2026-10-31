@@ -61,7 +61,9 @@ export const ROSTER: AICharacter[] = [
 // Members now have full-body looks (the avatar fields above are kept for history).
 for (const c of ROSTER) if (MEMBER_LOOKS[c.id]) c.avatar = MEMBER_LOOKS[c.id];
 
-export const rosterById = (id: string) => ROSTER.find((c) => c.id === id);
+/** People at an online table (friends and family), looked up like members so the table screens work unchanged. */
+export const GUESTS = new Map<string, AICharacter>();
+export const rosterById = (id: string) => ROSTER.find((c) => c.id === id) ?? GUESTS.get(id);
 
 export const playsGame = (c: AICharacter, game: GameId) => c.skill[game] > 0;
 

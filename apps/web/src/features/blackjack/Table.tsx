@@ -23,6 +23,10 @@ import { blackjackAI, blackjackThinkMs } from '../../../../../packages/engine/sr
 import type { BJAction, BJEvent, BJHand, BJOutcome, BlackjackConfig, BlackjackView } from '../../../../../packages/engine/src/blackjack/types.ts';
 
 export interface BlackjackMatchSetup {
+  /** Online: the RemoteSession for this table (replaces the local AI session). */
+  remote?: unknown;
+  /** Online: this table's room. */
+  roomId?: string;
   config: Partial<BlackjackConfig>;
   opponents: string[];
   kind: MatchKind;
@@ -78,7 +82,7 @@ export function BlackjackTable({ setup, onExit, onRematch, onFinished }: {
   const avatars: AvatarConfig[] = useMemo(() => [profile!.avatar, ...setup.opponents.map((id) => rosterById(id)!.avatar)], []);
   const props = useMemo(() => seatProps(setup.opponents), []);
 
-  const session: Session = useMemo(() => new LocalSession(BlackjackModule as never, {
+  const session: Session = useMemo(() => (setup.remote as Session | undefined) ?? new LocalSession(BlackjackModule as never, {
     config: setup.config,
     seats: seatInfo,
     humanSeat: 0,

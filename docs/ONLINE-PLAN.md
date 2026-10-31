@@ -6,7 +6,26 @@ Updated: 19 Oct 2026
 ## Progress (31 Oct 2026)
 - **GitHub:** the code is in `mcgintymania/Cardgame`. It went in through pull request #1 (branch `source-and-database`), and `index.html` stays the playable single-file build.
 - **Database:** the Supabase schema and seed are written in `supabase/migrations/`. Every table has row level security and server-only writes, and the security tests pass on PostgreSQL 16. The owner runs the SQL in the dashboard (see `supabase/README.md`).
-- **Next:** three Edge Functions (sign-up, sign-in and recovery, with rate limits), the sign-in screens, then reading the shared club from the database.
+- **Accounts:** built, but not yet live on Supabase.
+  - One Edge Function, `supabase/functions/auth/index.ts`, handles sign-up, sign-in and recovery, with rate limits and the same message whether or not a username exists. It's tested against a stand-in.
+  - The app has an Online page: sign in, create an account, recovery codes and forgot password. Once signed in, it shows your online coins and the live champions, rankings and news. It talks to Supabase with plain fetch (no supabase-js).
+  - The project URL and publishable key are in `apps/web/src/lib/online/config.ts`. Both are public by design.
+- **Owner to do:** run the SQL, deploy the `auth` function with its JWT check turned off, and set the two Auth settings (see `supabase/README.md`).
+- **Online tables:** built and tested, waiting to be deployed.
+  - **How a table works:** the host makes a table and shares a 6-letter code; friends join with it; the host starts; club members fill the empty seats. Six games: Take 2, Hold'em, Five-Card Draw, Hearts, Gin Rummy and Blackjack.
+  - **The server runs every game.** The `game` Edge Function wraps the same rules engine, and the AI members play on the server. Each player's view goes in `player_views`, readable only by that player.
+  - **The browser:**
+    - `RemoteSession` stands in for `LocalSession`, so the table screens are unchanged.
+    - It turns the seats round so you are always seat 0.
+    - It replays other players' moves one at a time, and checks for new moves every 1.2 seconds.
+  - **Slow players and leavers:** a slow player can be nudged after 60 seconds, and an unclaimed next hand is dealt after 12 seconds. If someone leaves mid-game, an AI member finishes for them and their result still counts.
+  - **Results:** `finish_match()` (migration 3) records ratings, matches, head-to-heads, coins, XP, stats, streaks and news in one transaction, and only once per table.
+  - **Tests:**
+    - Seat rotation is checked by AI playing from rotated views in all six games.
+    - The `game` function has been run with whole matches against an in-memory database.
+    - Two real browsers have played Take 2 and Hold'em against a stand-in Supabase.
+    - `finish_match` passes on PostgreSQL 16.
+- **Not yet online:** titles and Cups (online games are casual), friends lists, the shop with online coins, and feats/achievements counted on the server.
 
 ## Decisions so far
 - **Build order changed by the owner:** games and design first, offline against AI. GitHub and Supabase (accounts, online play, server-held coins) come after.

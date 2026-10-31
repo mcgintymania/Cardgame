@@ -26,6 +26,10 @@ import { bestArrangement, type Meld } from '../../../../../packages/engine/src/g
 import type { GinAction, GinConfig, GinEvent, GinHandResult, GinView } from '../../../../../packages/engine/src/gin/types.ts';
 
 export interface GinMatchSetup {
+  /** Online: the RemoteSession for this table (replaces the local AI session). */
+  remote?: unknown;
+  /** Online: this table's room. */
+  roomId?: string;
   config: Partial<GinConfig>;
   opponents: string[];
   kind: MatchKind;
@@ -133,7 +137,7 @@ export function GinTable({ setup, onExit, onRematch, onFinished }: {
   const avatars: AvatarConfig[] = useMemo(() => [profile!.avatar, opp.avatar], []);
   const props = useMemo(() => seatProps(setup.opponents), []);
 
-  const session: Session = useMemo(() => new LocalSession(GinModule as never, {
+  const session: Session = useMemo(() => (setup.remote as Session | undefined) ?? new LocalSession(GinModule as never, {
     config: setup.config,
     seats: seatInfo,
     humanSeat: 0,

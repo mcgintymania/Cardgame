@@ -12,6 +12,7 @@ const ITEMS: Array<{ route: Route; label: string; desc: string; ready: boolean }
   { route: 'blackjack', label: 'Blackjack', desc: 'Tournament blackjack vs the dealer', ready: true },
   { route: 'solitaire', label: 'Solitaire', desc: 'Klondike, and the Daily Deal', ready: true },
   { route: 'pyramid', label: 'Beat the Pyramid', desc: 'Higher or lower to the top', ready: true },
+  { route: 'online', label: 'Online', desc: 'Your account and the shared club, live', ready: true },
   { route: 'friends', label: 'Friends', desc: 'Add friends and invite them to tables', ready: false },
   { route: 'club', label: 'The Club', desc: 'Rankings, titles, the Club Cup and members', ready: true },
   { route: 'challenges', label: 'Challenges', desc: 'Daily and weekly goals', ready: false },

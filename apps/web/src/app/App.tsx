@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { onlineOutcome, openOnlineTable, type OnlineTable } from '../features/online/launch.ts';
+import { leaveTable } from '../lib/online/tables.ts';
+import { OnlinePage } from '../features/online/Online.tsx';
 import { store, useStore } from '../lib/store.ts';
 import { cryptoRng } from '../../../../packages/engine/src/core/rng.ts';
 import { ME, cupOpponents, forfeit, pickOpponents, recordMatch, simulateOrder, titleStatus, type MatchKind, type Outcome } from '../lib/club.ts';
@@ -38,12 +41,16 @@ import { BlackjackTable, type BlackjackMatchSetup } from '../features/blackjack/
 
 export type Route =
   | 'home' | 'play' | 'take2' | 'profile' | 'settings' | 'more'
-  | 'poker' | 'hearts' | 'gin' | 'draw' | 'blackjack' | 'solitaire' | 'pyramid' | 'club' | 'friends' | 'challenges' | 'shop' | 'wardrobe';
+  | 'poker' | 'hearts' | 'gin' | 'draw' | 'blackjack' | 'solitaire' | 'pyramid' | 'club' | 'friends' | 'challenges' | 'shop' | 'wardrobe' | 'online';
 
-const ROUTES: Route[] = ['home', 'play', 'take2', 'profile', 'settings', 'more', 'poker', 'hearts', 'gin', 'draw', 'blackjack', 'solitaire', 'pyramid', 'club', 'friends', 'challenges', 'shop', 'wardrobe'];
+const ROUTES: Route[] = ['home', 'play', 'take2', 'profile', 'settings', 'more', 'poker', 'hearts', 'gin', 'draw', 'blackjack', 'solitaire', 'pyramid', 'club', 'friends', 'challenges', 'shop', 'wardrobe', 'online'];
 const GAME_ROUTES: Route[] = ['take2', 'poker', 'hearts', 'gin', 'draw', 'blackjack', 'solitaire', 'pyramid'];
 
 export interface MatchSetup {
+  /** Online: the RemoteSession for this table (replaces the local AI session). */
+  remote?: unknown;
+  /** Online: this table's room. */
+  roomId?: string;
   config: Partial<Take2Config>;
   opponents: string[];
   kind: MatchKind;
@@ -66,6 +73,8 @@ export interface Nav {
   startPyramid: (c: PyramidConfig) => void;
   /** Title match or Club Cup match for a game. */
   startEvent: (game: GameId, kind: Exclude<MatchKind, 'casual'>) => void;
+  /** Sit down at an online table that has started. */
+  startOnline: (roomId: string) => Promise<void>;
 }
 
 const RAIL: Array<{ route: Route; label: string; glyph: string }> = [
@@ -80,6 +89,7 @@ const RAIL: Array<{ route: Route; label: string; glyph: string }> = [
   { route: 'solitaire', label: 'Solitaire', glyph: '♤' },
   { route: 'pyramid', label: 'Beat the Pyramid', glyph: '▲' },
   { route: 'club', label: 'The Club', glyph: '♛' },
+  { route: 'online', label: 'Online', glyph: '◎' },
   { route: 'wardrobe', label: 'Wardrobe', glyph: '⌘' },
   { route: 'shop', label: 'Shop', glyph: '¤' },
   { route: 'profile', label: 'Profile', glyph: '◉' },
@@ -129,8 +139,14 @@ export function App() {
     try { history.replaceState(null, '', `#${r}`); } catch { /* sandboxed */ }
     window.scrollTo(0, 0);
   };
+  const [onlineTable, setOnlineTable] = useState<OnlineTable | null>(null);
   const nav: Nav = {
     go,
+    startOnline: async (roomId) => {
+      const t = await openOnlineTable(roomId);
+      setOnlineTable(t);
+      setMatchKey((k: number) => k + 1);
+    },
     startTake2: (m) => {
       setMatch(m);
       setMatchKey((k: number) => k + 1);
@@ -267,6 +283,25 @@ export function App() {
     );
   }
 
+  if (onlineTable) {
+    const t = onlineTable;
+    const exit = () => {
+      if (t.session.info.status === 'playing') void leaveTable(t.roomId).catch(() => {});
+      t.session.dispose();
+      setOnlineTable(null);
+      go('online');
+    };
+    const k = `online-${t.roomId}`;
+    const common = { onFinished: () => onlineOutcome(t), onExit: exit, onRematch: () => { t.session.dispose(); setOnlineTable(null); go('online'); } };
+    switch (t.game) {
+      case 'take2': return <Take2Table key={k} {...common} setup={t.setup as never} />;
+      case 'poker': case 'draw': return <PokerTable key={k} {...common} setup={t.setup as never} />;
+      case 'hearts': return <HeartsTable key={k} {...common} setup={t.setup as never} />;
+      case 'gin': return <GinTable key={k} {...common} setup={t.setup as never} />;
+      case 'blackjack': return <BlackjackTable key={k} {...common} setup={t.setup as never} />;
+    }
+  }
+
   if (pokerMatch) {
     const pg: GameId = pokerMatch.config.variant === 'draw' ? 'draw' : 'poker';
     return (
@@ -309,6 +344,7 @@ export function App() {
     case 'shop': screen = <Shop nav={nav} />; break;
     case 'profile': screen = <Profile nav={nav} />; break;
     case 'settings': screen = <Settings />; break;
+    case 'online': screen = <OnlinePage nav={nav} />; break;
     case 'more': screen = <More nav={nav} />; break;
     default: screen = <ComingSoon route={route} nav={nav} />;
   }
