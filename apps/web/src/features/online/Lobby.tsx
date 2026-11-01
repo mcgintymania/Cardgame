@@ -68,7 +68,7 @@ function WaitingRoom({ roomId, nav, onLeft }: { roomId: string; nav: Nav; onLeft
         <span><small>Table code</small><b>{room.code}</b></span>
         <Button variant="ghost" size="sm" onClick={copy}>{copied ? 'Copied' : 'Copy code'}</Button>
       </div>
-      <p className="muted small">Send this code to your brothers. They open Online, choose <b>Join a table</b> and type it in.</p>
+      <p className="muted small">Send this code to your friends and family. They open Online, choose <b>Join a table</b> and type it in.</p>
       <ol className="room-seats">
         {Array.from({ length: total }, (_, i) => {
           const s = people[i];
@@ -152,7 +152,7 @@ export function Lobby({ nav }: { nav: Nav }) {
             <Button variant="ghost" size="sm" disabled={seats >= hi} onClick={() => setSeats(seats + 1)}>+</Button>
           </div>
         )}
-        <p className="muted small">You get a code to send to your brothers. Any seats still empty when you start are filled by club members. Your house rules from this device are used.</p>
+        <p className="muted small">You get a code to send to your friends and family. Any seats still empty when you start are filled by club members. Your house rules from this device are used.</p>
         <div className="btn-row"><Button size="lg" disabled={busy} onClick={() => run(async () => { const r = await createTable(game, seats, rulesFor(game)); setRoom(r.roomId); })}>Make a {NAMES[game]} table</Button></div>
       </section>
 

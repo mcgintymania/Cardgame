@@ -28,7 +28,7 @@ import { Take2Setup } from '../features/take2/Setup.tsx';
 import { Take2Table } from '../features/take2/Table.tsx';
 import { Profile } from '../features/profile/Profile.tsx';
 import { Settings } from '../features/settings/Settings.tsx';
-import { More, ComingSoon } from '../features/more/More.tsx';
+import { More } from '../features/more/More.tsx';
 import { PokerSetup } from '../features/poker/Setup.tsx';
 import { PokerTable, type PokerMatchSetup } from '../features/poker/Table.tsx';
 import type { Take2Config } from '../../../../packages/engine/src/take2/config.ts';
@@ -370,7 +370,7 @@ export function App() {
     case 'settings': screen = <Settings />; break;
     case 'online': screen = <OnlinePage nav={nav} />; break;
     case 'more': screen = <More nav={nav} />; break;
-    default: screen = <ComingSoon route={route} nav={nav} />;
+    default: screen = <Home nav={nav} />; // an old or unknown link: go home
   }
 
   return (

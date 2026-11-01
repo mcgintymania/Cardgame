@@ -107,7 +107,7 @@ export const EMPTY_STATS: PracticeStats = {
   bjPlayed: 0, bjWins: 0, bjBlackjacks: 0, bjBestChips: 0, lastPlayed: null,
 };
 
-const KEYS = {
+export const KEYS = {
   profile: 'cardclub.profile.v1',
   settings: 'cardclub.settings.v1',
   stats: 'cardclub.stats.v1',
@@ -191,7 +191,8 @@ function loadClub(): ClubState {
 // Tiny observable store so every screen sees the same values.
 type Listener = () => void;
 const listeners = new Set<Listener>();
-const mem = {
+function loadAll() {
+  return {
   profile: loadProfile(),
   wallet: loadWallet(),
   settings: read<Settings>(KEYS.settings, DEFAULT_SETTINGS),
@@ -205,7 +206,9 @@ const mem = {
   bjRules: read<Partial<BlackjackConfig> | null>(KEYS.bjRules, null),
   solitaire: read<SolitaireStats>(KEYS.solitaire, EMPTY_SOLITAIRE),
   pyramid: read<PyramidStats>(KEYS.pyramid, EMPTY_PYRAMID),
-};
+  };
+}
+const mem = loadAll();
 
 function emit() {
   for (const l of listeners) l();
@@ -213,6 +216,7 @@ function emit() {
 
 export const store = {
   get: () => mem,
+  subscribe(fn: Listener) { listeners.add(fn); return () => { listeners.delete(fn); }; },
   setProfile(p: LocalProfile) { mem.profile = p; write(KEYS.profile, p); emit(); },
   setSettings(patch: Partial<Settings>) { mem.settings = { ...mem.settings, ...patch }; write(KEYS.settings, mem.settings); emit(); },
   setTake2Rules(r: Partial<Take2Config> | null) { mem.take2Rules = r; write(KEYS.take2Rules, r ? { ...r, rulesV: TAKE2_RULES_V } : r); emit(); },
@@ -349,6 +353,34 @@ export function importBackup(text: string): { ok: true; savedAt: string } | { er
     }
   } catch { return { error: "This browser wouldn't let us save it." }; }
   return { ok: true, savedAt: o.savedAt ?? '' };
+}
+
+// ------------------------------------------------------------ account save
+// What goes to your account when you're signed in: everything except this
+// device's own settings (sound, card size…).
+export const SAVE_PARTS = (Object.keys(KEYS) as Array<keyof typeof KEYS>).filter((k) => k !== 'settings');
+export type SaveData = Partial<Record<(typeof SAVE_PARTS)[number], unknown>>;
+
+/** Everything on this device that belongs in the account save. */
+export function saveData(): SaveData {
+  const data: SaveData = {};
+  for (const name of SAVE_PARTS) {
+    try { const raw = localStorage.getItem(KEYS[name]); if (raw) data[name] = JSON.parse(raw); } catch { /* skip */ }
+  }
+  return data;
+}
+
+/** Puts an account save on this device (keeping this device's settings) and refreshes every screen. */
+export function applySaveData(data: SaveData) {
+  try {
+    for (const name of SAVE_PARTS) {
+      const v = data[name];
+      if (v === undefined || v === null) localStorage.removeItem(KEYS[name]); else localStorage.setItem(KEYS[name], JSON.stringify(v));
+    }
+  } catch { /* storage blocked */ }
+  const settings = mem.settings;
+  Object.assign(mem, loadAll(), { settings });
+  emit();
 }
 
 export function useStore() {

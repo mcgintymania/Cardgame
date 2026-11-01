@@ -23,7 +23,7 @@ export function GinSetup({ nav }: { nav: Nav }) {
   return (
     <div className="page setup">
       <header className="page-head">
-        <p className="eyebrow">Practice table · one on one</p>
+        <p className="eyebrow">Club table · one on one</p>
         <h1 className="display h-lg">Gin Rummy</h1>
         <p className="lede">Build sets and runs, keep your deadwood low, and knock when it's {rules.knockMax} or under. Go gin for a bonus. First to {rules.target} wins.</p>
       </header>
@@ -59,7 +59,7 @@ export function GinSetup({ nav }: { nav: Nav }) {
 
       <MemberSheet id={member} onClose={() => setMember(null)} myName={saved.profile?.name ?? 'You'} />
       <div className="start-bar">
-        <span className="muted small"><Tag>Practice</Tag> Counts toward your club ranking</span>
+        <span className="muted small"><Tag>Club table</Tag> Coins, XP and ranking when you finish</span>
         <Button size="lg" onClick={() => nav.startGin({ config: rules, opponents: picked, kind: 'casual' })}>Deal me in</Button>
       </div>
     </div>

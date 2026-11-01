@@ -556,7 +556,7 @@ export function PokerTable({ setup, onExit, onRematch, onFinished }: {
       {chipsFly.map((f) => <ChipFlier key={f.id} f={f} reduced={reduced} done={(id) => setChipsFly((fs: ChipFly[]) => fs.filter((x) => x.id !== id))} />)}
 
       <Sheet open={sheet === 'leave'} onClose={() => setSheet(null)} title="Leave the table?">
-        <p className="muted">{isEvent && !outcome && !meOut ? 'This is a club event: leaving now counts as finishing last.' : "Practice chips aren't kept. A game you leave early doesn't count."}</p>
+        <p className="muted">{isEvent && !outcome && !meOut ? 'This is a club event: leaving now counts as finishing last.' : "Table chips are only for this game. If you leave now it won't count: no coins, XP or ranking."}</p>
         <div className="btn-row">
           <Button variant="danger" onClick={() => { if (meOut && !clubRecorded.current) seeResult(); onExit(isEvent && !meOut && !outcome); }}>Leave table</Button>
           <Button variant="ghost" onClick={() => setSheet(null)}>Keep playing</Button>

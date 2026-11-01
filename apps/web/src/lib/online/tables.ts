@@ -203,6 +203,10 @@ export class RemoteSession<Action = unknown, View = unknown, Event = unknown> im
     if (!row || row.version <= this.shown) return;
     const fresh = row.view.log.filter((e) => e.n > this.shown);
     const gap = !row.view.log.some((e) => e.n === this.shown + 1) && fresh.length > 0 && fresh[0].n !== this.shown + 1;
+    if (row.view.status === 'finished' && this.data.status !== 'finished') {
+      // The server has paid out: bring the coins into your wallet soon.
+      setTimeout(() => { try { window.dispatchEvent(new Event('cardclub:sync')); } catch { /* old browser */ } }, 1500);
+    }
     this.data = row.view;
     this.shown = row.version;
     this.onData?.(row.view);

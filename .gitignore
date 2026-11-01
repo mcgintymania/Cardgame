@@ -6,3 +6,4 @@ scratch/
 .env.*
 supabase/.temp/
 .DS_Store
+site/

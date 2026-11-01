@@ -566,7 +566,7 @@ export function Take2Table({ setup, onExit, onRematch, onFinished }: {
       </Sheet>
 
       <Sheet open={sheet === 'leave'} onClose={() => setSheet(null)} title="Leave the table?">
-        <p className="muted">{isEvent && !outcome ? 'This is a club event: leaving now counts as finishing last.' : "This practice match will be abandoned and won't count in your stats."}</p>
+        <p className="muted">{isEvent && !outcome ? 'This is a club event: leaving now counts as finishing last.' : "If you leave now this game won't count: no coins, XP or ranking."}</p>
         <div className="btn-row">
           <Button variant="danger" onClick={() => onExit(isEvent && !outcome)}>Leave table</Button>
           <Button variant="ghost" onClick={() => setSheet(null)}>Keep playing</Button>

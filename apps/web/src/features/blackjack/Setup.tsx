@@ -28,7 +28,7 @@ export function BlackjackSetup({ nav }: { nav: Nav }) {
   return (
     <div className="page setup">
       <header className="page-head">
-        <p className="eyebrow">Practice table · tournament</p>
+        <p className="eyebrow">Club table · tournament</p>
         <h1 className="display h-lg">Blackjack</h1>
         <p className="lede">Everyone at the table plays the dealer. You all start with {rules.startingChips.toLocaleString('en-GB')} chips, and after {rules.rounds} hands the biggest stack wins. Play it safe or bet big to catch the leader.</p>
       </header>
@@ -66,7 +66,7 @@ export function BlackjackSetup({ nav }: { nav: Nav }) {
 
       <MemberSheet id={member} onClose={() => setMember(null)} myName={saved.profile?.name ?? 'You'} />
       <div className="start-bar">
-        <span className="muted small"><Tag>Practice chips</Tag> Not your real balance</span>
+        <span className="muted small"><Tag>Table chips</Tag> Just for this game. Coins and XP are paid at the end</span>
         <Button size="lg" onClick={() => nav.startBlackjack({ config: rules, opponents: picked, kind: 'casual' })}>Take a seat</Button>
       </div>
     </div>

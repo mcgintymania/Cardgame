@@ -48,7 +48,7 @@ export function onlineOutcome(t: OnlineTable): Outcome {
   const d = t.session.info;
   const mine = d.result?.find((r) => r.seat === d.seat);
   if (!mine) {
-    return { headline: 'The table plays on', lines: ["Your result is saved to the online club when the game finishes. You can leave: an AI member keeps your seat warm."], tone: 'info', ratingChange: 0, won: false };
+    return { headline: 'The table plays on', lines: ["Your result is saved to the online club when the game finishes. You can leave: a club member keeps your seat warm."], tone: 'info', ratingChange: 0, won: false };
   }
   const change = mine.ratingAfter - mine.ratingBefore;
   const won = mine.place === 1;
@@ -56,7 +56,7 @@ export function onlineOutcome(t: OnlineTable): Outcome {
     headline: won ? 'You won!' : `You finished ${ordinal(mine.place)}`,
     lines: [
       `Online rating ${mine.ratingBefore} → ${mine.ratingAfter} (${change >= 0 ? '+' : ''}${change})`,
-      `+${mine.coins} online coins · +${mine.xp} XP`,
+      `+${mine.coins} coins · +${mine.xp} XP (added to your wallet)`,
       'Recorded in the online club: rankings, head-to-heads and news.',
     ],
     tone: won ? 'good' : 'info',

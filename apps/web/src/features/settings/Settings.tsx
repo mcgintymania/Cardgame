@@ -4,15 +4,23 @@ import { sfx } from '../../lib/audio.ts';
 import { Button, Segmented, Toggle } from '../../design/ui.tsx';
 import { ALL_SHOWN } from '../../lib/games.ts';
 import { SEASONS } from '../../lib/seasons.ts';
+import { SaveStatus } from '../online/SaveStatus.tsx';
+import { InstallPanel } from './Install.tsx';
+import { APP_VERSION } from '../../lib/pwa.ts';
+import { forgetWelcomeChoice } from '../online/Welcome.tsx';
+import { syncBeforeSignOut } from '../../lib/online/cloudSave.ts';
+import { signOut } from '../../lib/online/client.ts';
+import { useSession } from '../../lib/online/useOnline.ts';
 
 export function Settings() {
   const { settings } = useStore();
   const [confirmReset, setConfirmReset] = useState(false);
+  const signedIn = !!useSession();
   const [backupMsg, setBackupMsg] = useState<string | null>(null);
   const download = () => {
     let framed = false;
     try { framed = window.top !== window.self; } catch { framed = true; }
-    if (framed) { setBackupMsg('Backups can’t be saved inside this preview. Use the downloaded copy of Card Club (or the real app later).'); return; }
+    if (framed) { setBackupMsg('Backups can’t be saved inside this preview. Open Card Club in its own tab, or the installed app, to save one.'); return; }
     try {
       const blob = new Blob([exportBackup()], { type: 'application/json' });
       const a = document.createElement('a');
@@ -83,7 +91,7 @@ export function Settings() {
 
       <section className="panel">
         <h2 className="h-sec">Table</h2>
-        <Segmented id="set-speed" label="AI speed" hint="How long opponents take to think." value={settings.aiSpeed}
+        <Segmented id="set-speed" label="Opponent speed" hint="How long club members take to think." value={settings.aiSpeed}
           options={[{ value: 'relaxed', label: 'Relaxed' }, { value: 'normal', label: 'Normal' }, { value: 'fast', label: 'Fast' }]}
           onChange={(aiSpeed) => store.setSettings({ aiSpeed })} />
         <Segmented id="set-size" label="Card size" hint="Larger cards are easier to read on small screens." value={settings.cardSize}
@@ -98,23 +106,32 @@ export function Settings() {
           onChange={(motion) => store.setSettings({ motion })} />
       </section>
 
+      <InstallPanel />
+
       <section className="panel">
-        <h2 className="h-sec">This device</h2>
-        <p className="muted">Your name, look, practice stats and house rules are stored in this browser.</p>
+        <h2 className="h-sec">Your progress</h2>
+        <p className="muted">{signedIn
+          ? 'Your name, look, coins, items, stats, club record and house rules are saved to your account and on this device. Sign in on any phone or computer to carry on.'
+          : 'Your name, look, coins, items, stats, club record and house rules are kept on this device. Sign in (Online) to save them to an account and play on other devices too.'}</p>
+        <SaveStatus />
         <div className="btn-row">
           <Button variant="ghost" onClick={download}>Back up my progress</Button>
           <label className="btn btn-ghost btn-md file-btn">Restore from a backup<input type="file" accept=".json,application/json" onChange={restore} /></label>
         </div>
-        <p className="row-hint">The backup is one small file with your player, coins, wardrobe, club and stats. Use it to move to another device. When accounts go online, it can be brought into your account.</p>
+        <p className="row-hint">The backup is one small file with your player, coins, wardrobe, club and stats. Restoring it replaces what's on this device{signedIn ? ' and in your account' : ''}.</p>
         {backupMsg && <p className="item-msg" role="status">{backupMsg}</p>}
         {confirmReset ? (
           <div className="btn-row">
-            <Button variant="danger" onClick={() => { store.resetAll(); setConfirmReset(false); }}>Yes, erase everything</Button>
+            <Button variant="danger" onClick={async () => {
+              if (signedIn) { await syncBeforeSignOut(); forgetWelcomeChoice(); signOut(); }
+              store.resetAll(); setConfirmReset(false);
+            }}>{signedIn ? 'Yes, sign out and erase' : 'Yes, erase everything'}</Button>
             <Button variant="ghost" onClick={() => setConfirmReset(false)}>Keep it</Button>
           </div>
         ) : (
-          <Button variant="ghost" onClick={() => setConfirmReset(true)}>Erase local data…</Button>
+          <Button variant="ghost" onClick={() => setConfirmReset(true)}>{signedIn ? 'Sign out and erase this device…' : 'Erase everything on this device…'}</Button>
         )}
+        <p className="fine">Card Club version {APP_VERSION}</p>
       </section>
     </div>
   );

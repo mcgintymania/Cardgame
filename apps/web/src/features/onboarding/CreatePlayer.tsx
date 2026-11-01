@@ -4,6 +4,7 @@ import { Character, DEFAULT_LOOK, type Look } from '../../design/Character.tsx';
 import { Button, Tag } from '../../design/ui.tsx';
 import { BodyEditor } from '../wardrobe/BodyEditor.tsx';
 import { STARTER_LOOKS } from '../../lib/look.ts';
+import { online } from '../../lib/online/client.ts';
 
 export function CreatePlayer({ defaultName }: { defaultName?: string } = {}) {
   const [name, setName] = useState(defaultName ?? '');
@@ -73,7 +74,9 @@ export function CreatePlayer({ defaultName }: { defaultName?: string } = {}) {
               </>
             )}
             <p className="local-note">
-              <Tag tone="warn">Local mode</Tag> Saved on this device only. Accounts with username and password arrive when the online version is connected.
+              {online.session
+                ? <><Tag tone="ok">Signed in</Tag> Saved to your account, so it's the same on every device.</>
+                : <><Tag>This device</Tag> Saved here. Sign in from Online any time to keep it in an account too.</>}
             </p>
           </form>
         </div>
