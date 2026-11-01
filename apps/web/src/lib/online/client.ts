@@ -42,8 +42,13 @@ async function authFn(body: Record<string, unknown>): Promise<{ session?: Sessio
   return data;
 }
 
+/** The username last used to sign in on this device (to fill in your name). */
+export function lastUsername(): string | undefined { try { return localStorage.getItem('cardclub.lastUser') ?? undefined; } catch { return undefined; } }
+const remember = (u: string) => { try { localStorage.setItem('cardclub.lastUser', u); } catch { /* storage blocked */ } };
+
 export async function signUp(username: string, password: string, look?: unknown): Promise<string[]> {
   const r = await authFn({ action: 'signup', username, password, look });
+  remember(username);
   if (r.session) save(r.session);
   return r.recoveryCodes ?? [];
 }
@@ -51,11 +56,13 @@ export async function signUp(username: string, password: string, look?: unknown)
 export async function signIn(username: string, password: string): Promise<void> {
   const r = await authFn({ action: 'login', username, password });
   if (!r.session) throw new OnlineError('Username or password is wrong.');
+  remember(username);
   save(r.session);
 }
 
 export async function recover(username: string, code: string, newPassword: string): Promise<void> {
   const r = await authFn({ action: 'recover', username, code, newPassword });
+  remember(username);
   if (r.session) save(r.session);
 }
 

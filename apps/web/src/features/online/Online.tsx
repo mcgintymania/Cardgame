@@ -13,6 +13,7 @@ import {
 } from '../../lib/online/client.ts';
 import { useSession } from '../../lib/online/useOnline.ts';
 import { Lobby } from './Lobby.tsx';
+import { forgetWelcomeChoice } from './Welcome.tsx';
 
 const USERNAME_RE = /^[A-Za-z0-9_]{3,20}$/;
 const msg = (e: unknown) => (e instanceof OnlineError ? e.message : 'Something went wrong. Please try again.');
@@ -27,9 +28,9 @@ function Field({ id, label, hint, ...rest }: { id: string; label: string; hint?:
   );
 }
 
-function SignedOut({ onCodes }: { onCodes: (codes: string[]) => void }) {
+export function SignedOut({ onCodes, start = 'in' }: { onCodes: (codes: string[]) => void; start?: 'in' | 'up' | 'recover' }) {
   const { profile } = useStore();
-  const [tab, setTab] = useState<'in' | 'up' | 'recover'>('in');
+  const [tab, setTab] = useState<'in' | 'up' | 'recover'>(start);
   const [username, setUsername] = useState(profile?.name?.replace(/[^A-Za-z0-9_]/g, '').slice(0, 20) ?? '');
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
@@ -88,7 +89,7 @@ function SignedOut({ onCodes }: { onCodes: (codes: string[]) => void }) {
   );
 }
 
-function RecoveryCodes({ codes, onDone }: { codes: string[]; onDone: () => void }) {
+export function RecoveryCodes({ codes, onDone }: { codes: string[]; onDone: () => void }) {
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
   const text = `Card Club recovery codes\nEach code works once. Keep them somewhere safe.\n\n${codes.join('\n')}\n`;
@@ -158,7 +159,7 @@ function SignedIn({ nav }: { nav: Nav }) {
           </span>
         </div>
         {error && <p className="item-msg is-error" role="alert">{error}</p>}
-        <div className="btn-row"><Button variant="ghost" onClick={() => signOut()}>Sign out</Button></div>
+        <div className="btn-row"><Button variant="ghost" onClick={() => { forgetWelcomeChoice(); signOut(); }}>Sign out</Button></div>
       </section>
 
       <Lobby nav={nav} />
@@ -215,6 +216,7 @@ export function OnlinePage({ nav }: { nav: Nav }) {
           <li><b>Tables with friends and family</b> for Take 2, Hold'em, Five-Card Draw, Hearts, Gin Rummy and Blackjack. Club members fill any empty seats.</li>
           <li><b>Every online game counts</b> for the shared club: rankings, head-to-heads, club news, online coins and XP.</li>
           <li><b>Fair play:</b> the cards are shuffled and dealt on the server. Nobody's browser ever sees another player's hand or the deck.</li>
+          <li><b>Say it to their face:</b> quick phrases and emotes reach everyone at the table. After the game, <b>Rematch</b> keeps the same group together, no new code needed.</li>
           <li><b>Slow player?</b> After a minute, anyone at the table can be nudged and the game plays a safe move for them. If someone leaves, a club member finishes their game.</li>
           <li>Games on this device keep working offline as before. Offline coins and items stay on this device and don't move to your online account.</li>
         </ul>

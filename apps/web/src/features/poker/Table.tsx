@@ -1,3 +1,4 @@
+import { onlineTableNow } from '../../lib/online/tables.ts';
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { awardFeats, pokerTracker } from '../../lib/feats.ts';
 import { prefersReducedMotion, store, useStore } from '../../lib/store.ts';
@@ -608,7 +609,7 @@ export function PokerTable({ setup, onExit, onRematch, onFinished }: {
           </table>
         </div>
         <EndButtons isEvent={isEvent} onRematch={onRematch} onExit={() => onExit(false)} />
-        <p className="fine"><Tag>Club</Tag> Ratings and records saved on this device.</p>
+        <p className="fine"><Tag>Club</Tag> {onlineTableNow() ? "Ratings and records saved to the online club." : "Ratings and records saved on this device."}</p>
       </Sheet>
     </div>
   );
