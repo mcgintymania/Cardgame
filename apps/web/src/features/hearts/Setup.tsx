@@ -23,7 +23,7 @@ export function HeartsSetup({ nav }: { nav: Nav }) {
   return (
     <div className="page setup">
       <header className="page-head">
-        <p className="eyebrow">Practice table · four players</p>
+        <p className="eyebrow">Club table · four players</p>
         <h1 className="display h-lg">Hearts</h1>
         <p className="lede">Dodge the hearts and the Queen of Spades. Every heart is a point, the Queen is 13, and the lowest score wins when someone hits {rules.endAt}. Or take the lot and shoot the moon.</p>
       </header>
@@ -62,7 +62,7 @@ export function HeartsSetup({ nav }: { nav: Nav }) {
 
       <MemberSheet id={member} onClose={() => setMember(null)} myName={saved.profile?.name ?? 'You'} />
       <div className="start-bar">
-        <span className="muted small"><Tag>Practice</Tag> Counts toward your club ranking</span>
+        <span className="muted small"><Tag>Club table</Tag> Coins, XP and ranking when you finish</span>
         <Button size="lg" onClick={() => nav.startHearts({ config: rules, opponents: picked, kind: 'casual' })}>Deal me in</Button>
       </div>
     </div>

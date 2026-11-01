@@ -8,7 +8,7 @@ import { SeasonCalendar } from '../seasons/Season.tsx';
 import { itemState, levelInfo, tierFor, winsAgainst } from '../../lib/progress.ts';
 import { ROSTER } from '../../lib/roster.ts';
 import { Avatar } from '../../design/Avatar.tsx';
-import { Button, Sheet, Tag } from '../../design/ui.tsx';
+import { Button, Sheet } from '../../design/ui.tsx';
 import { ItemSheet, ItemThumb, StateLabel } from '../wardrobe/Items.tsx';
 import { Coins, LevelBar } from '../wardrobe/bits.tsx';
 import { BoostsPanel, BundleCard, BundleSheet, CasesPanel, DailyCut } from './extras.tsx';
@@ -228,7 +228,7 @@ export function Shop({ nav, start }: { nav: Nav; start?: ShopCat }) {
           <button className="linkish" onClick={() => setLedger(true)}>Coin history</button>
         </div>
       </header>
-      <p className="muted small"><Tag tone="warn">Local mode</Tag> Club coins are earned by playing and only buy cosmetics. There's no real money in Card Club.</p>
+      <p className="muted small">Club coins are earned by playing and only buy cosmetics. There's no real money in Card Club, ever.</p>
 
       <div className="shop-layout">
         <nav className="shop-menu" role="tablist" aria-label="Shop sections">

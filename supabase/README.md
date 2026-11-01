@@ -1,12 +1,13 @@
 # Supabase setup
 
-Three SQL files set up the whole database. Run them **in order**, once each.
+Four SQL files set up the whole database. Run them **in order**, once each.
 
 ## 1. Run the SQL
 In the Supabase dashboard: **SQL Editor → New query**.
 1. Open `migrations/20261031000001_card_club_schema.sql`, copy all of it, paste, **Run**. It should finish with "Success. No rows returned".
 2. New query again: paste `migrations/20261031000002_seed.sql`, **Run**. This adds the 247 items, the 25 AI members, their ratings and the first champions.
 3. New query again: paste `migrations/20261101000003_online_tables.sql`, **Run**. This lets online games record their results (ratings, coins, XP, head-to-heads, news) in one safe step.
+4. New query again: paste `migrations/20261101000004_account_save.sql`, **Run**. This gives every account one save and one wallet, so coins, items and progress follow you to every device.
 
 The seed file can be run again safely, and should be whenever the catalogue changes. It's generated from the game code by `bun scripts/gen-seed.ts`.
 

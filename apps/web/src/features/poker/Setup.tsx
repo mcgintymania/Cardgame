@@ -35,7 +35,7 @@ export function PokerSetup({ nav, game = 'poker' }: { nav: Nav; game?: 'poker' |
   return (
     <div className="page setup">
       <header className="page-head">
-        <p className="eyebrow">Practice table</p>
+        <p className="eyebrow">Club table</p>
         <h1 className="display h-lg">{draw ? 'Five-Card Draw' : "Texas Hold'em"}</h1>
         <p className="lede">{draw
           ? 'The classic home game. Five cards each, a round of betting, swap up to three cards, then bet again. Best hand wins. Last player with chips takes the table.'
@@ -59,7 +59,7 @@ export function PokerSetup({ nav, game = 'poker' }: { nav: Nav; game?: 'poker' |
 
       <MemberSheet id={member} onClose={() => setMember(null)} myName={saved.profile?.name ?? 'You'} />
       <div className="start-bar">
-        <span className="muted small"><Tag>Practice chips</Tag> Not your real balance</span>
+        <span className="muted small"><Tag>Table chips</Tag> Just for this game. Coins and XP are paid at the end</span>
         <Button size="lg" onClick={start}>Take a seat</Button>
       </div>
     </div>

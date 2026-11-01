@@ -8,11 +8,14 @@ import { Button, Tag } from '../../design/ui.tsx';
 import { GAMES, GAME_NAMES, type GameId } from '../../lib/roster.ts';
 import { useShown } from '../../lib/games.ts';
 import {
-  OnlineError, countPlayers, loadBoard, loadMe, loadNews, loadTitles, recover, signIn, signOut, signUp,
-  type BoardRow, type MyAccount, type NewsRow, type TitleRow,
+  OnlineError, countPlayers, loadBoard, loadMe, loadNews, recover, signIn, signOut, signUp,
+  type BoardRow, type MyAccount, type NewsRow,
 } from '../../lib/online/client.ts';
 import { useSession } from '../../lib/online/useOnline.ts';
 import { Lobby } from './Lobby.tsx';
+import { SaveStatus } from './SaveStatus.tsx';
+import { syncBeforeSignOut } from '../../lib/online/cloudSave.ts';
+import { levelInfo } from '../../lib/progress.ts';
 import { forgetWelcomeChoice } from './Welcome.tsx';
 
 const USERNAME_RE = /^[A-Za-z0-9_]{3,20}$/;
@@ -121,18 +124,19 @@ export function RecoveryCodes({ codes, onDone }: { codes: string[]; onDone: () =
 function SignedIn({ nav }: { nav: Nav }) {
   const { games, shows } = useShown();
   const [me, setMe] = useState<MyAccount | null>(null);
-  const [titles, setTitles] = useState<TitleRow[]>([]);
   const [news, setNews] = useState<NewsRow[]>([]);
   const [players, setPlayers] = useState<number | null>(null);
   const [game, setGame] = useState<GameId>(games[0] ?? 'take2');
   const [board, setBoard] = useState<BoardRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const session = useSession();
+  const { wallet } = useStore();
+  const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
     let live = true;
-    Promise.all([loadMe(), loadTitles(), loadNews(), countPlayers()])
-      .then(([m, t, n, c]) => { if (live) { setMe(m); setTitles(t); setNews(n); setPlayers(c); } })
+    Promise.all([loadMe(), loadNews(), countPlayers()])
+      .then(([m, n, c]) => { if (live) { setMe(m); setNews(n); setPlayers(c); } })
       .catch((e) => live && setError(msg(e)));
     return () => { live = false; };
   }, []);
@@ -153,28 +157,21 @@ function SignedIn({ nav }: { nav: Nav }) {
             {me && <small className="muted">Member since {new Date(me.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</small>}
           </span>
           <span className="online-me-stats">
-            <span><b>{me ? me.coins.toLocaleString('en-GB') : '…'}</b><small>online coins</small></span>
-            <span><b>{me?.level ?? '…'}</b><small>level</small></span>
+            <span><b>{wallet.coins.toLocaleString('en-GB')}</b><small>coins</small></span>
+            <span><b>{levelInfo(wallet.xp).level}</b><small>level</small></span>
             {players !== null && <span><b>{players}</b><small>{players === 1 ? 'player' : 'players'}</small></span>}
           </span>
         </div>
         {error && <p className="item-msg is-error" role="alert">{error}</p>}
-        <div className="btn-row"><Button variant="ghost" onClick={() => { forgetWelcomeChoice(); signOut(); }}>Sign out</Button></div>
+        <div className="btn-row"><Button variant="ghost" disabled={leaving} onClick={async () => { setLeaving(true); await syncBeforeSignOut(); forgetWelcomeChoice(); signOut(); }}>{leaving ? 'Saving…' : 'Sign out'}</Button></div>
+        <SaveStatus />
       </section>
 
       <Lobby nav={nav} />
 
-      <section className="panel">
-        <h2 className="h-sec">Champions <Tag tone="ok">Live</Tag></h2>
-        <ul className="online-titles">
-          {titles.filter((t) => shows(t.game as GameId)).map((t) => (
-            <li key={t.game}><small>{GAME_NAMES[t.game as GameId]}</small><b>{t.holder?.name}</b>{t.holder?.kind === 'human' && <Tag>Player</Tag>}<em>{t.defences} defences</em></li>
-          ))}
-        </ul>
-      </section>
 
       <section className="panel">
-        <h2 className="h-sec">Rankings</h2>
+        <h2 className="h-sec">Online rankings</h2>
         <div className="tab-strip" role="tablist">
           {GAMES.filter((g) => shows(g)).map((g) => <button key={g} role="tab" aria-selected={game === g} className={`tab-chip ${game === g ? 'is-on' : ''}`} onClick={() => setGame(g)}>{GAME_NAMES[g]}</button>)}
         </div>
@@ -207,18 +204,18 @@ export function OnlinePage({ nav }: { nav: Nav }) {
       <header className="page-head">
         <p className="eyebrow">The club, online</p>
         <h1 className="display h-lg">Online</h1>
-        <p className="lede">One club for everyone: you, your friends and family, and the 25 members, with shared rankings, titles and Cups.</p>
+        <p className="lede">Play your friends and family at a real table, from anywhere. Every online game counts in the online rankings.</p>
       </header>
       {codes ? <RecoveryCodes codes={codes} onDone={() => setCodes(null)} /> : session ? <SignedIn nav={nav} /> : <SignedOut onCodes={setCodes} />}
       <section className="panel panel-quiet">
-        <h2 className="h-sec">What's online so far</h2>
+        <h2 className="h-sec">How online play works</h2>
         <ul className="plain-list">
           <li><b>Tables with friends and family</b> for Take 2, Hold'em, Five-Card Draw, Hearts, Gin Rummy and Blackjack. Club members fill any empty seats.</li>
-          <li><b>Every online game counts</b> for the shared club: rankings, head-to-heads, club news, online coins and XP.</li>
+          <li><b>Every online game counts</b> for the shared club: rankings, head-to-heads and club news, and pays coins and XP into your wallet.</li>
           <li><b>Fair play:</b> the cards are shuffled and dealt on the server. Nobody's browser ever sees another player's hand or the deck.</li>
           <li><b>Say it to their face:</b> quick phrases and emotes reach everyone at the table. After the game, <b>Rematch</b> keeps the same group together, no new code needed.</li>
           <li><b>Slow player?</b> After a minute, anyone at the table can be nudged and the game plays a safe move for them. If someone leaves, a club member finishes their game.</li>
-          <li>Games on this device keep working offline as before. Offline coins and items stay on this device and don't move to your online account.</li>
+          <li><b>One wallet:</b> while you're signed in, your coins, items, level and records are saved to your account and follow you to any phone or computer. Games played offline catch up when you're back online.</li>
         </ul>
         <div className="btn-row"><Button variant="ghost" onClick={() => nav.go('play')}>Play offline</Button></div>
       </section>

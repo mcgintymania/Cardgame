@@ -35,7 +35,7 @@ export function Welcome({ onDevice, onCodes }: { onDevice: () => void; onCodes: 
               <Button size="lg" variant="ghost" onClick={() => setMode('up')}>Create an account</Button>
             </div>
             <button className="link-btn welcome-device" onClick={() => { chooseDevice(); onDevice(); }}>Play on this device without an account</button>
-            <p className="fine">No email needed. Games on this device work offline whether you sign in or not.</p>
+            <p className="fine">No email needed. Signed in, your coins, items and progress are saved to your account and follow you to any device{profile ? ' (what\'s on this device is added to it)' : ''}. Games work offline either way.</p>
           </>
         ) : (
           <>

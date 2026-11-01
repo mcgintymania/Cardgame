@@ -28,7 +28,7 @@ export function SolitaireSetup({ nav }: { nav: Nav }) {
       <section className="block">
         <button className="event-strip daily-strip" onClick={() => nav.startSolitaire({ mode: 'daily', draw: 1 })}>
           <span>
-            <b>Daily Deal · {todayKey()}</b>
+            <b>Daily Deal · {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}</b>
             <small>{today?.won ? `Solved in ${fmtTime(today.time ?? 0)}. Play again to beat your time.` : today?.tries ? `Not solved yet (${today.tries} ${today.tries === 1 ? 'try' : 'tries'}). Same shuffle as everyone else.` : 'The same shuffle for everyone today, draw 1. First solve earns 40 bonus coins.'}</small>
           </span>
           <span className="chev" aria-hidden="true">›</span>

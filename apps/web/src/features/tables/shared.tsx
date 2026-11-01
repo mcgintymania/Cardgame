@@ -120,7 +120,7 @@ export function TableBar({ title, sub, onLeave, onScores, onRules, players, onEm
 export function LeaveSheet({ open, onClose, isEvent, finished, onLeave }: { open: boolean; onClose: () => void; isEvent: boolean; finished: boolean; onLeave: (forfeit: boolean) => void }) {
   return (
     <Sheet open={open} onClose={onClose} title="Leave the table?">
-      <p className="muted">{isEvent && !finished ? 'This is a club event: leaving now counts as finishing last.' : "This practice match will be abandoned and won't count in your stats."}</p>
+      <p className="muted">{isEvent && !finished ? 'This is a club event: leaving now counts as finishing last.' : "If you leave now this game won't count: no coins, XP or ranking."}</p>
       <div className="btn-row">
         <Button variant="danger" onClick={() => onLeave(isEvent && !finished)}>Leave table</Button>
         <Button variant="ghost" onClick={onClose}>Keep playing</Button>

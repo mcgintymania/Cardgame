@@ -15,7 +15,7 @@ import {
   ME, TITLE_SHOT_RANK, cabinetFor, cupName, nameOf, ordinal, rankOf, rankings, titleName, titleStatus, type Outcome, type Reign,
 } from '../../lib/club.ts';
 
-export const shortDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+export const shortDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 export const daysBetween = (a: string, b: string | null) => Math.max(1, Math.round(((b ? new Date(b).getTime() : Date.now()) - new Date(a).getTime()) / 86400000));
 
 export function OutcomeCard({ outcome }: { outcome: Outcome }) {
@@ -180,7 +180,7 @@ export function SeatPicker({ game, count, min, max, ids, onCount, onShuffle, onT
         <Stepper id={`${game}-count`} label="Opponents" hint="Seats are filled from the club, matched roughly to your level."
           value={count} min={min} max={max} onChange={onCount} />
       ) : (
-        <div className="row-setting"><span className="row-text"><span className="row-label">{count === 1 ? 'Your opponent' : `${count} opponents`}</span><span className="row-hint">Chosen from the club, matched roughly to your level.</span></span></div>
+        <div className="row-setting"><span className="row-text"><span className="row-label">{count === 1 ? 'Opponent' : `${count} opponents`}</span><span className="row-hint">Chosen from the club, matched roughly to your level.</span></span></div>
       )}
       <div className="seat-row">
         {ids.map((id) => {

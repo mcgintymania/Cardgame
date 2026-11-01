@@ -28,7 +28,7 @@ export function ClubPage({ nav }: { nav: Nav }) {
   return (
     <div className="page club">
       <header className="page-head">
-        <p className="eyebrow">25 members · est. tonight</p>
+        <p className="eyebrow">25 members · open every night</p>
         <h1 className="display h-lg">The Club</h1>
         <div className="my-standing">
           {games.map((g) => (
@@ -133,7 +133,7 @@ export function ClubPage({ nav }: { nav: Nav }) {
               <div className="btn-row">
                 {games.map((g) => (
                   <Button key={g} variant="ghost" onClick={() => { store.setClub(startCup(store.get().club, g, cryptoRng())); }}>
-                    Enter the {GAME_NAMES[g]} Cup <small className="ed">· ed. {club.cupEdition[g]}</small>
+                    Enter the {GAME_NAMES[g]} Cup <small className="ed">· No. {club.cupEdition[g]}</small>
                   </Button>
                 ))}
               </div>

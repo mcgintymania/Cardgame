@@ -3,7 +3,7 @@ import type { Nav } from '../../app/App.tsx';
 import { useStore } from '../../lib/store.ts';
 import { CardBack, CardFace } from '../../design/PlayingCard.tsx';
 import { makeCard } from '../../../../../packages/engine/src/core/cards.ts';
-import { Button, ChipIcon, CoinIcon, Tag } from '../../design/ui.tsx';
+import { Button, CoinIcon, Tag } from '../../design/ui.tsx';
 import { Avatar as Av } from '../../design/Avatar.tsx';
 import { Emblem } from '../club/bits.tsx';
 import { Character } from '../../design/Character.tsx';
@@ -19,6 +19,7 @@ import { POKER_PRESETS } from '../poker/Setup.tsx';
 import { BoostRings, DailyCut } from '../shop/extras.tsx';
 import { openShopAt } from '../shop/Shop.tsx';
 import { useSession } from '../../lib/online/useOnline.ts';
+import { InstallHint } from '../settings/Install.tsx';
 import { SeasonBanner } from '../seasons/Season.tsx';
 
 const QUICK: GameId[] = ['take2', 'poker', 'hearts', 'gin', 'draw', 'blackjack'];
@@ -57,7 +58,7 @@ export function ModeTiles({ nav }: { nav: Nav }) {
         <span className="mode-text">
           <span className="mode-name">Take 2</span>
           <span className="mode-desc">Knockout. Stay under 100 points. Every 2 doubles your hand.</span>
-          <Tag tone="ok">Practise vs AI</Tag>
+          <Tag tone="ok">2–6 players · online</Tag>
         </span>
       </button>
       )}
@@ -69,8 +70,8 @@ export function ModeTiles({ nav }: { nav: Nav }) {
         </span>
         <span className="mode-text">
           <span className="mode-name">Texas Hold'em</span>
-          <span className="mode-desc">No-limit, up to nine seats. Eight AI regulars with their own styles.</span>
-          <Tag tone="ok">Practise vs AI</Tag>
+          <span className="mode-desc">No-limit, up to nine seats. The regulars each have their own style.</span>
+          <Tag tone="ok">2–9 players · online</Tag>
         </span>
       </button>
       )}
@@ -83,7 +84,7 @@ export function ModeTiles({ nav }: { nav: Nav }) {
         <span className="mode-text">
           <span className="mode-name">Hearts</span>
           <span className="mode-desc">Four players. Dodge the hearts and the Queen of Spades, or shoot the moon.</span>
-          <Tag tone="ok">New · vs AI</Tag>
+          <Tag tone="ok">4 players · online</Tag>
         </span>
       </button>
       )}
@@ -96,7 +97,7 @@ export function ModeTiles({ nav }: { nav: Nav }) {
         <span className="mode-text">
           <span className="mode-name">Gin Rummy</span>
           <span className="mode-desc">One on one. Sets, runs and a knock at the right moment.</span>
-          <Tag tone="ok">New · vs AI</Tag>
+          <Tag tone="ok">2 players · online</Tag>
         </span>
       </button>
       )}
@@ -109,7 +110,7 @@ export function ModeTiles({ nav }: { nav: Nav }) {
         <span className="mode-text">
           <span className="mode-name">Five-Card Draw</span>
           <span className="mode-desc">The classic home poker game. Bet, swap up to three, bet again.</span>
-          <Tag tone="ok">New · vs AI</Tag>
+          <Tag tone="ok">2–6 players · online</Tag>
         </span>
       </button>
       )}
@@ -122,7 +123,7 @@ export function ModeTiles({ nav }: { nav: Nav }) {
         <span className="mode-text">
           <span className="mode-name">Blackjack</span>
           <span className="mode-desc">Tournament style: beat the dealer, finish with the biggest stack.</span>
-          <Tag tone="ok">New · vs AI</Tag>
+          <Tag tone="ok">Up to 5 · online</Tag>
         </span>
       </button>
       )}
@@ -135,7 +136,7 @@ export function ModeTiles({ nav }: { nav: Nav }) {
         <span className="mode-text">
           <span className="mode-name">Solitaire</span>
           <span className="mode-desc">Classic Klondike, draw 1 or 3. Plus a Daily Deal against the club's times.</span>
-          <Tag tone="ok">New · solo</Tag>
+          <Tag tone="ok">Solo</Tag>
         </span>
       </button>
       )}
@@ -148,7 +149,7 @@ export function ModeTiles({ nav }: { nav: Nav }) {
         <span className="mode-text">
           <span className="mode-name">Beat the Pyramid</span>
           <span className="mode-desc">Higher or lower, from the bottom-left card all the way to the top.</span>
-          <Tag tone="ok">New · solo</Tag>
+          <Tag tone="ok">Solo</Tag>
         </span>
       </button>
       )}
@@ -175,7 +176,6 @@ export function Home({ nav }: { nav: Nav }) {
           <LevelBar />
           <div className="balances" aria-label="Balances">
             <button className="balance" onClick={() => nav.go('shop')}><CoinIcon /> <b>{wallet.coins.toLocaleString('en-GB')}</b> <em>club coins</em></button>
-            <span className="balance is-locked" title="Unlocks with online accounts"><ChipIcon /> <b>Chips</b> <em>online</em></span>
           </div>
           <BoostRings onClick={() => openShopAt(nav, 'boosts')} />
           <div className="btn-row hero-ctas">
@@ -186,6 +186,7 @@ export function Home({ nav }: { nav: Nav }) {
         </div>
       </section>
 
+      <InstallHint />
       <SeasonBanner onShop={() => openShopAt(nav, 'featured')} />
 
       <section className="block">
@@ -201,7 +202,7 @@ export function Home({ nav }: { nav: Nav }) {
                 <span>
                   <small>{titleName(g)}</small>
                   <b>{holder === ME ? 'You' : nameOf(holder)}</b>
-                  <em>{st.kind === 'champion' ? 'Defend it' : st.kind === 'eligible' ? 'You have a title shot!' : `${club.titles[g].current.defences} defences`}</em>
+                  <em>{st.kind === 'champion' ? 'Defend it' : st.kind === 'eligible' ? 'You have a title shot!' : `${club.titles[g].current.defences} defence${club.titles[g].current.defences === 1 ? '' : 's'}`}</em>
                 </span>
               </button>
             );
@@ -216,7 +217,7 @@ export function Home({ nav }: { nav: Nav }) {
 
       <section className="block two-col">
         <div className="panel">
-          <h2 className="h-sec">Your practice</h2>
+          <h2 className="h-sec">Your games</h2>
           {stats.take2Played + stats.pokerPlayed + stats.heartsPlayed + stats.ginPlayed + stats.drawPlayed + stats.bjPlayed === 0 ? (
             <p className="empty">No games yet. Your first game will show up here.</p>
           ) : (
@@ -227,7 +228,7 @@ export function Home({ nav }: { nav: Nav }) {
               {shows('gin') && <div><dt>Gin wins</dt><dd>{stats.ginWins}<small>/{stats.ginPlayed}</small></dd></div>}
               {shows('draw') && <div><dt>Draw wins</dt><dd>{stats.drawWins}<small>/{stats.drawPlayed}</small></dd></div>}
               {shows('blackjack') && <div><dt>Blackjack wins</dt><dd>{stats.bjWins}<small>/{stats.bjPlayed}</small></dd></div>}
-              <div><dt>Last game</dt><dd className="small">{last ? last.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : '—'}</dd></div>
+              <div><dt>Last game</dt><dd className="small">{last ? last.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '—'}</dd></div>
             </dl>
           )}
         </div>

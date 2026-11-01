@@ -1,4 +1,5 @@
 import { SolStats } from '../solitaire/Table.tsx';
+import { useSession } from '../../lib/online/useOnline.ts';
 import React, { useState } from 'react';
 import type { Nav } from '../../app/App.tsx';
 import { useStore } from '../../lib/store.ts';
@@ -20,9 +21,10 @@ export function Profile({ nav }: { nav: Nav }) {
   const myRivals = rivals(club).filter((r) => shows(r.game));
   const [member, setMember] = useState<string | null>(null);
   const extras = useMyExtras();
+  const signedIn = !!useSession();
   if (!profile) return null;
   const winRate = stats.take2Played ? Math.round((stats.take2Wins / stats.take2Played) * 100) : null;
-  const since = new Date(profile.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+  const since = new Date(profile.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
     <div className="page">
@@ -34,7 +36,7 @@ export function Profile({ nav }: { nav: Nav }) {
           <p className="eyebrow">Member since {since}</p>
           <h1 className="display h-lg">{profile.name}</h1>
           <LevelBar />
-          <p className="muted"><Coins /> club coins · <Tag tone="warn">Local mode</Tag></p>
+          <p className="muted"><Coins /> club coins · {signedIn ? <Tag tone="ok">Saved to your account</Tag> : <Tag>On this device</Tag>}</p>
           <div className="btn-row">
             <Button onClick={() => nav.go('wardrobe')}>Wardrobe</Button>
             <Button variant="ghost" onClick={() => nav.go('shop')}>Shop</Button>
@@ -81,7 +83,7 @@ export function Profile({ nav }: { nav: Nav }) {
             })}
           </ul>
         )}
-        <p className="fine">When online play arrives, friends (and brothers) get the same head-to-head record.</p>
+        <p className="fine">These are your games against club members. Online games against friends and family count in the online rankings.</p>
       </section>
 
       {shows('take2') && (
@@ -94,7 +96,7 @@ export function Profile({ nav }: { nav: Nav }) {
           <div><dt>Rounds won</dt><dd>{stats.take2RoundsWon}</dd></div>
           <div><dt>Best finish</dt><dd>{stats.take2BestFinish ? ORD[stats.take2BestFinish] : '—'}</dd></div>
         </dl>
-        <p className="fine">Every table counts towards your club ranking. Practice games never earn currency.</p>
+        <p className="fine">Every game you finish counts towards your club ranking and pays coins and XP.</p>
       </section>
       )}
 

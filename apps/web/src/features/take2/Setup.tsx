@@ -34,7 +34,7 @@ export function Take2Setup({ nav }: { nav: Nav }) {
   return (
     <div className="page setup">
       <header className="page-head">
-        <p className="eyebrow">Practice table</p>
+        <p className="eyebrow">Club table</p>
         <h1 className="display h-lg">Take 2</h1>
         <p className="lede">Get rid of your cards. When someone goes out, everyone else adds up their hand. Reach {rules.eliminationAt} and you're knocked out. Last player standing wins.</p>
       </header>
@@ -72,7 +72,7 @@ export function Take2Setup({ nav }: { nav: Nav }) {
 
       <MemberSheet id={member} onClose={() => setMember(null)} myName={saved.profile?.name ?? 'You'} />
       <div className="start-bar">
-        <span className="muted small"><Tag>Practice</Tag> No currency at stake</span>
+        <span className="muted small"><Tag>Club table</Tag> Coins, XP and ranking when you finish</span>
         <Button size="lg" onClick={start}>Deal me in</Button>
       </div>
     </div>

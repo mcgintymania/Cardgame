@@ -1638,3 +1638,17 @@ body:has(.table-screen) .season-deco { display: none; }
 .link-btn { background: none; border: 0; color: var(--brass); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font: inherit; padding: 10px 0; }
 .welcome .welcome-device { display: block; margin: 6px auto 0; }
 .welcome .online-auth { margin: 16px 0 0; }
+
+/* Account save status */
+.save-status { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.save-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok, #6fbf73); flex: none; }
+.save-dot.is-syncing { background: var(--brass); animation: pulse 1s ease-in-out infinite alternate; }
+.save-dot.is-offline { background: #c9785a; }
+.save-dot.is-off { background: var(--ink-3, #888); }
+@keyframes pulse { from { opacity: .35 } to { opacity: 1 } }
+
+/* Install the app */
+.install-hint { display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin: 0 0 16px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line-2); }
+.install-hint img { border-radius: 10px; flex: none; }
+.install-hint span { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.install-hint small { color: var(--ink-3); }

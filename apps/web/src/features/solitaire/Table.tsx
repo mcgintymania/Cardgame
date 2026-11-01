@@ -292,7 +292,7 @@ export function SolitaireTable({ setup, onExit, onAgain }: { setup: SolitaireSet
 
       <Sheet open={sheet === 'won'} title={daily ? 'Daily Deal solved' : 'Solved!'} wide dismissable={false}>
         <div className="winner">
-          <p className="eyebrow">{daily ? `Daily Deal · ${todayKey()}` : `Draw ${s.config.draw}`}</p>
+          <p className="eyebrow">{daily ? `Daily Deal · ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}` : `Draw ${s.config.draw}`}</p>
           <h2 className="display h-lg">{fmtTime(elapsed)}</h2>
           <p className="muted">{s.moves} moves · {s.score} points</p>
         </div>
